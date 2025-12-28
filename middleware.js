@@ -1,5 +1,10 @@
 export const config = {
-  matcher: ['/builder', '/builder/:path*', '/api/state-save'],
+  matcher: [
+    '/builder',
+    '/builder.html',
+    '/builder/:path*',
+    '/api/state-save'
+  ],
 };
 
 export default function middleware(req) {
