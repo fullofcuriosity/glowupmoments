@@ -5,7 +5,8 @@
   "outputDirectory": "public",
   "routes": [
     { "src": "^/api/(.*)$", "dest": "/api/$1" },
-    { "src": "^/builder/?$", "dest": "/builder.html" },
+    { "src": "^/builder/?$", "dest": "/api/builder" },
+    { "src": "^/builder\\.html$", "status": 404 },
     { "src": "^/(.*)$", "dest": "/$1" }
   ]
 }
