@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>
+   Dotagora — Builder Landing Page
+  </title>
+  <meta content="Wonderlink-style with a modular builder: icon-first UI, video background, optional shop and booking." name="description"/>
+  <link href="/favicon.ico" rel="icon"/>
+  <link href="styles.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&amp;family=Fira+Code:wght@400;600&amp;family=Indie+Flower&amp;family=JetBrains+Mono:wght@400;600&amp;family=Lato:wght@300;400;700&amp;family=Merriweather:wght@300;400;700&amp;family=Montserrat:wght@400;600;700&amp;family=Open+Sans:wght@400;600;700&amp;family=Oswald:wght@400;600&amp;family=Playfair+Display:wght@400;600;700&amp;family=Poppins:wght@400;600;700&amp;family=Nunito:wght@400;700&amp;display=swap" rel="stylesheet"/>
+ </head>
+ <body class="theme-builder">
+  <!-- Background video + overlay -->
+   <video class="bg-video" autoplay muted loop playsinline aria-hidden="true"></video>
+  <div aria-hidden="true" class="bg-overlay">
+  </div>
+  <!-- Puzzle background -->
+  <div class="puzzle-bg" id="puzzle">
+   <div class="bg-full">
+   </div>
+  </div>
+  <!-- Central stack -->
+  <main class="stack">
+   <!-- Profile card -->
+   <header class="card profile" data-module="" id="profile">
+    <div class="avatar-circle" data-avatar-bg="">
+    </div>
+    <h1 class="hero-title" data-company="">
+     Dotagora
+    </h1>
+    <p class="subtitle" data-slogan="">
+     Alle Infos an einem digitalen Ort auf einen Blick.
+    </p>
+    <p class="subtitle" data-slogan2="">
+     Inspiriert von der Agora – dem zentralen Ort im antiken Griechenland.
+    </p>
+    <!-- Social & contact -->
+    <nav aria-label="Social &amp; Kontakt" class="icons">
+     <a aria-label="QR-Code" class="icon-btn" href="#" id="qr-btn" title="QR-Code">
+      <i class="bi bi-qr-code">
+      </i>
+     </a>
+     <a aria-label="Twitch" class="icon-btn" href="https://www.twitch.tv/deinprofil" rel="noopener" target="_blank" title="Twitch">
+      <i class="bi bi-twitch">
+      </i>
+     </a>
+     <a aria-label="Instagram" class="icon-btn" href="https://instagram.com/deinprofil" rel="noopener" target="_blank" title="Instagram">
+      <i class="bi bi-instagram">
+      </i>
+     </a>
+     <a aria-label="Facebook" class="icon-btn" href="https://facebook.com/deinprofil" rel="noopener" target="_blank" title="Facebook">
+      <i class="bi bi-facebook">
+      </i>
+     </a>
+     <a aria-label="LinkedIn" class="icon-btn" href="https://www.linkedin.com/company/deinprofil" rel="noopener" target="_blank" title="LinkedIn">
+      <i class="bi bi-linkedin">
+      </i>
+     </a>
+     <a aria-label="E-Mail" class="icon-btn" href="mailto:hallo@firma.at" title="E-Mail">
+      <i class="bi bi-envelope-fill">
+      </i>
+     </a>
+     <a aria-label="Telefon" class="icon-btn" href="tel:+43123456789" title="Telefon">
+      <i class="bi bi-telephone-fill">
+      </i>
+     </a>
+     <a class="icon-btn" href="https://maps.google.com/?q=48.2082,16.3738" rel="noopener" target="_blank" title="Standort">
+      <i class="bi bi-geo-alt-fill">
+      </i>
+     </a>
+    </nav>
+   </header>
+   <!-- Booking (toggle via builder) -->
+   <section class="card booking" data-module="" hidden="" id="booking">
+    <h2 class="section-title">
+     Book an appointment
+    </h2>
+    <div class="booking-body">
+     <a class="btn primary big" href="https://cal.com/YOURNAME/30min" rel="noopener" target="_blank">
+      Choose time
+     </a>
+    </div>
+   </section>
+   <!-- OUTPUT: Services-Karten (wird per JS gerendert) -->
+   <section class="services-grid" id="services-list">
+   </section>
+   <!-- Shop / Offers (toggle via builder) -->
+   <section class="card offers" data-module="" hidden="" id="offers">
+    <details class="accordion" open="">
+     <summary>
+      <span class="summary-icon">
+      </span>
+      <span class="section-title">
+       Shop
+      </span>
+      <span aria-hidden="true" class="chev">
+      </span>
+     </summary>
+     <div class="shop-gap">
+     </div>
+     <!-- NEU: horizontales Produkt-Band mit Pfeilen -->
+     <div class="products-row">
+      <!-- Links-Pfeil -->
+      <button aria-label="Zurück" class="products-arrow left" data-dir="-1" type="button">
+       ‹
+      </button>
+      <!-- Produktband, wird per JS gefüllt -->
+      <div class="offers-grid products" id="productsGrid">
+      </div>
+      <!-- Rechts-Pfeil -->
+      <button aria-label="Weiter" class="products-arrow right" data-dir="1" type="button">
+       ›
+      </button>
+     </div>
+    </details>
+   </section>
+   <!-- Services-List (klassisch) -->
+   <section class="card services" data-module="" hidden="" id="services">
+    <h2 class="section-title">
+     Services
+    </h2>
+    <ul class="service-list">
+     <li>
+      <span class="name">
+       Service 1
+      </span>
+      <span class="dot">
+      </span>
+      <span class="note">
+       Short description
+      </span>
+     </li>
+     <li>
+      <span class="name">
+       Service 2
+      </span>
+      <span class="dot">
+      </span>
+      <span class="note">
+       Short description
+      </span>
+     </li>
+    </ul>
+   </section>
+   <!-- About -->
+   <section class="card contact" data-module="" id="about">
+    <h2 class="section-title">
+     About us
+    </h2>
+    <p class="subtitle desc" data-max="500" id="bizDesc">
+    </p>
+    <div class="contact-icons">
+    </div>
+    <div class="legal-links">
+     <button class="btn small legal-open" data-legal="imprint" type="button">
+      Impressum
+     </button>
+     <button class="btn small legal-open" data-legal="privacy" type="button">
+      Datenschutz
+     </button>
+     <button class="btn small legal-open" data-legal="terms" type="button">
+      AGB
+     </button>
+    </div>
+   </section>
+   <!-- Reviews -->
+   <section class="card reviews" data-module="" hidden="" id="reviews">
+    <h2 class="section-title">
+     References
+    </h2>
+    <ul class="review-list">
+     <li>
+      ⭐⭐⭐⭐⭐ “Super fast &amp; transparent.” — A. Meyer
+     </li>
+     <li>
+      ⭐⭐⭐⭐ “Direct booking, no back-and-forth.” — L. Novak
+     </li>
+    </ul>
+   </section>
+   <footer class="site-footer">
+    <div class="footer-inner">
+     <span data-company="">
+      Dotagora
+     </span>
+     ©
+     <span id="year">
+     </span>
+    </div>
+   </footer>
+  </main>
+  <!-- Cart Drawer + FAB -->
+  <aside aria-hidden="true" aria-label="Cart" class="cart" data-module="" hidden="" id="cartDrawer">
+   <div class="cart-head">
+    <h3>
+     Cart
+    </h3>
+    <button class="btn" id="cartClose">
+     ✕
+    </button>
+   </div>
+   <ul class="cart-items" id="cartItems">
+   </ul>
+   <div class="cart-foot">
+    <div>
+     <span>
+      Subtotal:
+     </span>
+     <strong id="cartSum">
+      €0
+     </strong>
+    </div>
+    <button class="btn primary" id="cartCheckout">
+     Checkout
+    </button>
+   </div>
+  </aside>
+  <button aria-label="Open cart" class="cart-fab" data-module="" hidden="" id="cartFab">
+   <i class="bi bi-cart">
+   </i>
+   <span id="cartCount">
+    0
+   </span>
+  </button>
+  <!-- 🧩 Builder FAB -->
+  <button aria-controls="quickPanel" aria-expanded="false" aria-haspopup="true" class="quick-fab" id="quickFab" title="Open builder" hidden>
+   <i class="bi bi-puzzle">
+   </i>
+  </button>
+  <!-- 🔒 Builder-Overlay (Lock wie Legal Modal) -->
+  <div class="builder-overlay" hidden="" id="builder-overlay">
+  </div>
+  <!-- 🧩 Builder-Panel -->
+  <div aria-label="Builder" class="quick-panel" hidden="" id="quickPanel" role="dialog">
+   <div class="qp-header">
+    <strong>
+     Builder
+    </strong>
+    <button class="btn small" id="quickClose" title="Close" type="button">
+     Done
+    </button>
+   </div>
+   <div class="editor-accordion">
+    <details class="ed-block" id="ed-links" open="">
+     <summary>
+      Deine Links
+     </summary>
+     <div class="ed-body">
+      <fieldset class="links-editor">
+       <legend>
+        URL
+       </legend>
+       <!-- URL -->
+       <div class="links-row">
+        <!--<label class="links-label">URL</label>-->
+        <div class="links-inputs two">
+         <span class="prefix" id="urlPrefix">
+          onedot.example/
+         </span>
+         <input class="links-input" id="urlSlug" placeholder="firma-oder-name"/>
+         <button class="btn small" id="copyUrl" type="button">
+          Kopieren
+         </button>
+         <span class="small muted" id="slugStatus" style="margin-left:8px;">
+         </span>
+        </div>
+       </div>
+      </fieldset>
+      <fieldset class="links-editor">
+       <legend>
+        Eigene Domain
+       </legend>
+       <!-- Eigene Domain -->
+       <div class="links-row">
+        <!-- <label class="links-label">Eigene Domain</label>-->
+        <div class="links-inputs two">
+         <input class="links-input" id="customDomain" placeholder="z. B. meinedomain.at"/>
+         <button class="btn small" id="saveDomain" type="button">
+          Speichern
+         </button>
+        </div>
+       </div>
+       <p class="muted small links-hint">
+        Hinweis: Die Domain verbindest du später in Vercel unter
+        <em>
+         Domains
+        </em>
+        .
+        Hier wird sie nur gespeichert.
+       </p>
+      </fieldset>
+     </div>
+    </details>
+    <!-- General -->
+    <details class="ed-block" id="ed-general" open="">
+     <summary>
+      General
+     </summary>
+     <div class="ed-body">
+      <div class="grid-2">
+       <label>
+        <span>
+         Font family
+        </span>
+        <select id="genFont">
+         <option value="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+          System default
+         </option>
+         <option value="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+          Inter
+         </option>
+         <option value="Arial, Helvetica, sans-serif">
+          Arial
+         </option>
+         <option value="Georgia, 'Times New Roman', serif">
+          Georgia
+         </option>
+         <option value="'Fira Code', ui-monospace, Consolas, 'Courier New', monospace">
+          Fira Code
+         </option>
+         <option value="'JetBrains Mono', ui-monospace, Consolas, 'Courier New', monospace">
+          JetBrains Mono
+         </option>
+         <option value="Montserrat, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+          Montserrat
+         </option>
+         <option value="Poppins, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+          Poppins
+         </option>
+         <option value="Lato, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+          Lato
+         </option>
+         <option value="Open Sans, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+          Open Sans
+         </option>
+         <option value="Nunito, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+          Nunito
+         </option>
+         <option value="Oswald, Arial, Helvetica, sans-serif">
+          Oswald
+         </option>
+         <option value="Merriweather, Georgia, 'Times New Roman', serif">
+          Merriweather
+         </option>
+         <option value="Playfair Display, Georgia, 'Times New Roman', serif">
+          Playfair Display
+         </option>
+         <option value="Caveat, 'Segoe UI', Arial, sans-serif">
+          Caveat (Handschrift)
+         </option>
+         <option value="'Indie Flower', 'Segoe UI', Arial, sans-serif">
+          Indie Flower (Handschrift)
+         </option>
+        </select>
+       </label>
+       <label class="has-swatch">
+        <span>
+         Text color
+        </span>
+        <span aria-hidden="true" class="swatch" id="swText">
+        </span>
+        <input id="genTextColor" type="color" value="#ecf0ff"/>
+       </label>
+      </div>
+     </div>
+    </details>
+    <!-- Background -->
+    <details class="ed-block" id="ed-bg">
+     <summary>
+      Background
+     </summary>
+     <div class="ed-body">
+      <label class="row">
+       <span>
+        Mode
+       </span>
+       <select id="bgMode">
+        <option value="color">
+         Color
+        </option>
+        <option value="image">
+         Image URL
+        </option>
+        <option value="video">
+         Video URL (mp4)
+        </option>
+       </select>
+      </label>
+      <div class="grid-2" data-show-if="bgMode=color">
+       <label class="has-swatch">
+        <span>
+         Color
+        </span>
+        <span aria-hidden="true" class="swatch" id="swBg">
+        </span>
+        <input id="bgColor" type="color" value="#0a0b0f"/>
+       </label>
+       <label class="has-swatch">
+        <span>
+         Overlay (0–0.8)
+        </span>
+        <span aria-hidden="true" class="swatch" id="swOverlay">
+        </span>
+        <input id="bgOverlay" max="0.8" min="0" step="0.02" type="range" value="0.35"/>
+       </label>
+      </div>
+ 
+      <div data-show-if="bgMode=image">
+  <label class="row">
+    <span>Background image</span>
+
+    <!-- Datei-Picker wie beim Avatar -->
+    <div class="file-input-row" id="bgImageDrop">
+      <input accept="image/*" hidden id="bgImageFile" type="file" />
+      <button class="input file-button" id="bgImagePick" type="button">Bild auswählen</button>
+
+      <!-- optional: Status -->
+      <span class="muted small" id="bgImageName" style="margin-left:10px;"></span>
+    </div>
+  </label>
+</div>
+
+
+<div class="grid-2" data-show-if="bgMode=video">
+  <label>
+    <span>Background video</span>
+
+    <!-- Datei-Picker wie beim Avatar -->
+    <div class="file-input-row" id="bgVideoDrop">
+      <input accept="video/mp4" hidden id="bgVideoFile" type="file" />
+      <button class="input file-button" id="bgVideoPick" type="button">Video auswählen</button>
+
+      <!-- optional: kleine Statuszeile -->
+      <span class="muted small" id="bgVideoName" style="margin-left:10px;"></span>
+    </div>
+  </label>
+
+  <button class="btn small" id="bgReload" type="button">Reload ⟳</button>
+</div>
+
+    </details>
+    <!-- Contact -->
+    <details class="ed-block" id="ed-head">
+     <summary>
+      Contact
+     </summary>
+     <div class="ed-body">
+      <section class="ed-block" id="ed-logo">
+       <h3 class="ed-title">
+        Logo/Avatar
+       </h3>
+       <div class="file-input-row" id="logoDrop">
+        <input accept="image/*" hidden="" id="logoFile" type="file"/>
+        <button class="input file-button" id="logoPick" type="button">
+         Datei auswählen
+        </button>
+       </div>
+      </section>
+      <label>
+       <span>
+        Company (max. 50)
+       </span>
+       <div class="editable" contenteditable="true" data-max="50" id="edTitle">
+        Dotagora
+       </div>
+      </label>
+      <label>
+       <span>
+        Slogan (max. 200)
+       </span>
+       <div class="editable" contenteditable="true" data-max="200" id="edSlogan">
+        Alle Infos an einem digitalen Ort auf einen Blick.
+       </div>
+      </label>
+      <label>
+       <span>
+        Textzeile 2 (max. 200)
+       </span>
+       <div class="editable" contenteditable="true" data-max="200" id="edSlogan2">
+        Inspiriert von der Agora – dem zentralen Ort im antiken Griechenland.
+       </div>
+      </label>
+      <fieldset class="ed-contacts cf-grid">
+       <legend>
+        Contact fields
+       </legend>
+       <div class="cf-row">
+        <input class="c-toggle" data-key="qr" id="c-qr" type="checkbox"/>
+        <label for="c-qr">
+         QR-Code anzeigen
+        </label>
+        <div class="cf-spacer">
+        </div>
+       </div>
+       <div class="cf-row">
+        <input class="c-toggle" data-key="twitch" id="c-twitch" type="checkbox"/>
+        <label for="c-twitch">
+         Twitch
+        </label>
+        <input class="c-input" data-key="twitch" placeholder="https://twitch.tv/deinprofil" type="url"/>
+       </div>
+       <div class="cf-row">
+        <input class="c-toggle" data-key="instagram" id="c-instagram" type="checkbox"/>
+        <label for="c-instagram">
+         Instagram
+        </label>
+        <input class="c-input" data-key="instagram" placeholder="https://instagram.com/…" type="url"/>
+       </div>
+       <div class="cf-row">
+        <input class="c-toggle" data-key="facebook" id="c-facebook" type="checkbox"/>
+        <label for="c-facebook">
+         Facebook
+        </label>
+        <input class="c-input" data-key="facebook" placeholder="https://facebook.com/…" type="url"/>
+       </div>
+       <div class="cf-row">
+        <input class="c-toggle" data-key="linkedin" id="c-linkedin" type="checkbox"/>
+        <label for="c-linkedin">
+         LinkedIn
+        </label>
+        <input class="c-input" data-key="linkedin" placeholder="https://linkedin.com/in/…" type="url"/>
+       </div>
+       <div class="cf-row">
+        <input class="c-toggle" data-key="email" id="c-email" type="checkbox"/>
+        <label for="c-email">
+         Email
+        </label>
+        <input class="c-input" data-key="email" placeholder="name@domain.tld" type="text"/>
+       </div>
+       <div class="cf-row">
+        <input class="c-toggle" data-key="phone" id="c-phone" type="checkbox"/>
+        <label for="c-phone">
+         Phone
+        </label>
+        <input class="c-input" data-key="phone" placeholder="+43 …" type="text"/>
+       </div>
+       <div class="cf-row">
+        <input class="c-toggle" data-key="maps" id="c-maps" type="checkbox"/>
+        <label for="c-maps">
+         Location
+        </label>
+        <input class="c-input" data-key="maps" placeholder="https://maps.google.com/?q=…" type="url"/>
+       </div>
+      </fieldset>
+     </div>
+    </details>
+    <!-- Information -->
+    <details class="ed-block" id="ed-about">
+     <summary>
+      Information
+     </summary>
+     <div class="ed-body">
+      <label>
+       <span>
+        Headline (max. 100)
+       </span>
+       <div class="editable" contenteditable="true" data-max="100" id="edAboutTitle">
+        About us
+       </div>
+      </label>
+      <label>
+       <span>
+        Description (max. 500)
+       </span>
+       <div class="editable" contenteditable="true" data-max="500" id="edAboutDesc">
+        Short description of your company…
+       </div>
+      </label>
+      <div class="icon-toggles">
+       <label>
+        <input class="i-toggle" data-name="shop" type="checkbox"/>
+        🛒 Shop
+       </label>
+       <label>
+        <input class="i-toggle" data-name="services" type="checkbox"/>
+        ⚙️ Services
+       </label>
+       <label>
+        <input class="i-toggle" data-name="calendar" type="checkbox"/>
+        📅 Calendar
+       </label>
+      </div>
+     </div>
+    </details>
+    <!-- Shop Inhalte -->
+    <details class="ed-block" id="ed-shop">
+     <summary>
+      Shop Inhalte
+     </summary>
+     <div class="ed-body" id="shopEditor">
+      <div class="grid-2" id="productEditorList" style="grid-template-columns:1fr; gap:12px;">
+      </div>
+      <div class="ed-actions">
+       <button class="btn primary" id="addProductBtn" type="button">
+        + Produkt hinzufügen
+       </button>
+       <button class="btn small" id="clearAllBtn" title="Alle Produkte löschen" type="button">
+        Alles löschen
+       </button>
+      </div>
+      <!-- Shop/Checkout-Farbe -->
+      <div class="ed-row" style="margin-top:10px;">
+       <label class="has-swatch">
+        <span>
+         Shop/Checkout-Farbe
+        </span>
+        <span aria-hidden="true" class="swatch" id="swBrand">
+        </span>
+        <input id="brandUnified" type="color" value="#86e8ff"/>
+       </label>
+      </div>
+      <!-- Versand-Editor -->
+      <fieldset class="ship-editor" id="shipEditor">
+       <legend>
+        Versand
+       </legend>
+       <p class="muted small" style="margin:8px 0 14px 0;">
+        Versandzonen und Preise festlegen:
+       </p>
+       <div class="ship-row">
+        <input id="shipAT" type="checkbox"/>
+        <label class="ship-label" for="shipAT">
+         innerhalb Österreich
+        </label>
+        <input class="ship-price" id="priceAT" min="0" step="0.1" type="number" value="4.9"/>
+       </div>
+       <div class="ship-row">
+        <input id="shipDE" type="checkbox"/>
+        <label class="ship-label" for="shipDE">
+         Deutschland
+        </label>
+        <input class="ship-price" id="priceDE" min="0" step="0.1" type="number" value="7.9"/>
+       </div>
+       <div class="ship-row">
+        <input id="shipEU" type="checkbox"/>
+        <label class="ship-label" for="shipEU">
+         innerhalb EU
+        </label>
+        <input class="ship-price" id="priceEU" min="0" step="0.1" type="number" value="9.9"/>
+       </div>
+       <div class="ship-row">
+        <input id="shipINT" type="checkbox"/>
+        <label class="ship-label" for="shipINT">
+         International
+        </label>
+        <input class="ship-price" id="priceINT" min="0" step="0.1" type="number" value="19.9"/>
+       </div>
+       <p class="muted small" style="margin:8px 0 14px 0;">
+        Kein Häkchen: Hinweis im Checkout „Kein Versand in dieses Land“.
+       </p>
+       <div class="ship-row">
+        <input id="freeActive" type="checkbox"/>
+        <label class="ship-label" for="freeActive">
+         Gratis-Versand ab
+        </label>
+        <input class="ship-price" id="freeThreshold" min="0" step="1" type="number" value="89"/>
+       </div>
+      </fieldset>
+      <p class="small muted">
+       Tipp: Bild-URL, Titel, Beschreibung &amp; Preis ausfüllen. Leere Felder werden ignoriert.
+      </p>
+     </div>
+    </details>
+    <!-- ✨ NEU: Services & Produkte (Builder) -->
+    <details class="ed-block" id="ed-services">
+     <summary>
+      Services &amp; Produkte
+     </summary>
+     <div class="ed-body">
+      <div class="ed-actions" style="margin-bottom:10px;">
+       <button class="btn add-service" type="button">
+        + Hinzufügen
+       </button>
+      </div>
+      <!-- repeater -->
+      <div class="repeater" id="services-repeater">
+       <template id="service-row-tpl">
+        <div class="repeater-row" data-service-row="">
+         <div class="row-head">
+          <strong data-bind="title">
+           Neuer Service
+          </strong>
+          <div class="row-actions">
+           <label class="switch">
+            <input checked="" data-field="visible" type="checkbox"/>
+            <span>
+             sichtbar
+            </span>
+           </label>
+           <button class="icon btn-up" title="nach oben" type="button">
+            ▲
+           </button>
+           <button class="icon btn-down" title="nach unten" type="button">
+            ▼
+           </button>
+           <button class="icon btn-del" title="löschen" type="button">
+            🗑
+           </button>
+          </div>
+         </div>
+         <div class="grid">
+          <label>
+           Titel
+           <input data-field="title" placeholder="Titel" type="text"/>
+          </label>
+          <label>
+           Preis
+           <input data-field="price" placeholder="z.B. 18,90€" type="text"/>
+          </label>
+          <label class="col-span-2">
+           Beschreibung
+           <textarea data-field="desc" placeholder="Kurzbeschreibung" rows="3"></textarea>
+          </label>
+          <label class="col-span-2">
+           Bild-URL
+           <div class="row">
+            <input data-field="img" placeholder="https://…/bild.jpg" type="url"/>
+            <button class="btn small pick-img" type="button">
+             Datei…
+            </button>
+           </div>
+           <img alt="" class="mini-preview" data-preview="" style="display:none;max-width:120px;border-radius:8px;margin-top:6px;"/>
+          </label>
+          <label>
+           Button-Text
+           <input data-field="ctaLabel" placeholder="z.B. In den Warenkorb" type="text"/>
+          </label>
+          <label>
+           Button-Link
+           <input data-field="ctaLink" placeholder="https://…" type="url"/>
+          </label>
+         </div>
+        </div>
+       </template>
+      </div>
+     </div>
+    </details>
+   </div>
+  </div>
+  <!-- QR Modal -->
+  <div aria-hidden="true" class="qr-modal" id="qr-modal">
+   <div aria-labelledby="qr-title" aria-modal="true" class="qr-dialog" role="dialog">
+    <h2 id="qr-title">
+     QR-Code
+    </h2>
+    <div class="qr-code-box" id="qr-code">
+    </div>
+    <div class="qr-actions">
+     <button class="btn small" id="qr-save" type="button">
+      Save as PNG
+     </button>
+     <button class="btn small" id="qr-close" type="button">
+      Close
+     </button>
+    </div>
+   </div>
+  </div>
+  <!-- File Upload Modal -->
+  <div aria-hidden="true" class="qr-modal" id="file-modal">
+   <div aria-labelledby="file-title" aria-modal="true" class="qr-dialog" role="dialog">
+    <h2 class="card-title" id="file-title">
+     Upload file
+    </h2>
+    <div class="dropzone" id="dropzone" tabindex="0">
+     <div class="dz-inner">
+      <i class="bi bi-cloud-arrow-up">
+      </i>
+      <p>
+       Drag &amp; drop here
+      </p>
+      <button class="btn small" id="file-choose" type="button">
+       Choose file
+      </button>
+      <input accept=".png,.jpg,.jpeg,.webp,.svg,.pdf" hidden="" id="file-input" type="file"/>
+      <div aria-live="polite" class="file-meta" id="file-meta">
+      </div>
+     </div>
+    </div>
+    <div class="qr-actions">
+     <button class="btn small" disabled="" id="file-use" type="button">
+      Use file
+     </button>
+     <button class="btn small" id="file-cancel" type="button">
+      Cancel
+     </button>
+    </div>
+   </div>
+  </div>
+  <div aria-hidden="true" id="productsHoverLayer">
+  </div>
+  <!-- Legal Modal -->
+  <div aria-hidden="true" class="qr-modal" id="legal-modal">
+   <div aria-labelledby="legal-title" aria-modal="true" class="qr-dialog legal-dialog" role="dialog">
+    <h2 id="legal-title">
+     Rechtliches
+    </h2>
+    <div class="legal-body" id="legal-body">
+     <!-- Text kommt dynamisch aus JS -->
+    </div>
+    <div class="qr-actions legal-actions">
+     <button class="btn small" id="legal-close" type="button">
+      Schließen
+     </button>
+    </div>
+   </div>
+  </div>
+  <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
+  </script>
+  <script src="/app.js">
+  </script>
+ </body>
+</html>

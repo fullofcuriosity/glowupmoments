@@ -1,0 +1,835 @@
+/* ===========================
+THEME & TOKENS
+=========================== */
+:root{
+  --bg1:#0a0b0f;
+  --text:#ecf0ff;
+
+  /* 5% heller als --text (Fallback) */
+  --subtitle: color-mix(in oklab, var(--text) 10%, white);
+  --muted: var(--subtitle);
+
+  --stroke:rgba(255,255,255,.14);
+  --glass:rgba(255,255,255,.06);
+
+  --brand:#86e8ff;
+  --brand-ink:#08242c;
+
+  --shadow:none;
+  --radius:18px;
+
+  --icon-size:32px;
+  --icon-ring:26px;
+
+  --fs:19px;
+  --fs-hero:clamp(1.5rem,2.2vw + .6rem,2.2rem);
+
+  --ff:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+
+  /* Puzzle BG */
+  --pz-bg:none;
+  --pz-cols:6;
+  --pz-rows:4;
+  --pz-gap:10px;
+  --pz-radius:20px;
+  --pz-duration:900ms;
+  --pz-stagger:120ms;
+
+  /* Panels */
+  --panel-bg:var(--bg1);
+
+  /* Slider-Parameter */
+  --prod-gap:16px;      /* Abstand zwischen Karten */
+  --card-min:340px;     /* ~8.6cm Mindestbreite je Karte */
+
+
+  /* MODAL Farben (außen dunkler, innen heller) */
+  --modal-overlay: color-mix(in oklab, black 62%, transparent); /* dunkler Overlay */
+  --modal-bg:      color-mix(in oklab, var(--bg1) 20%, white 22%); /* Dialog-Hintergrund */
+  --modal-border:  color-mix(in oklab, var(--text) 14%, transparent);
+  --modal-inner:   color-mix(in oklab, var(--bg1) 10%, white 10%); /* Body-Box innen */
+}
+
+/* ===========================
+GLOBAL BASICS
+=========================== */
+*{ box-sizing:border-box; }
+html,body{ height:100%; margin:0; padding:0; }
+body{
+  margin:0;
+  font:400 var(--fs)/1.6 var(--ff);
+  color:var(--text);
+  background:var(--bg1);
+}
+.small{ font-size:.9rem; }
+.muted{ color:var(--subtitle); }
+.center{ text-align:center; }
+
+/* ===========================
+BACKGROUND VIDEO + OVERLAY
+=========================== */
+.bg-video{
+  position:fixed; inset:0; width:100%; height:100%;
+  object-fit:cover; z-index:-3; filter:brightness(.6) saturate(1.05);
+}
+.bg-overlay{
+  position:fixed; inset:0; z-index:-1;
+  background:rgba(0,0,0,var(--overlay-a,0));
+  transition:background-color .3s ease;
+}
+
+/* ===========================
+PUZZLE BACKGROUND (optional)
+=========================== */
+.puzzle-bg{ display:none; }
+.puzzle-bg .bg-full{
+  position:absolute; inset:0; opacity:0; transition:opacity 600ms ease;
+  background-image:var(--pz-bg); background-repeat:no-repeat;
+  background-position:center;
+  background-size:calc(100% + (var(--pz-cols) - 1) * var(--pz-gap))
+  calc(100% + (var(--pz-rows) - 1) * var(--pz-gap));
+}
+.pz-piece{
+  border-radius:var(--pz-radius);
+  background-image:var(--pz-bg); background-repeat:no-repeat;
+  background-size:calc(100% + (var(--pz-cols) - 1) * var(--pz-gap))
+  calc(100% + (var(--pz-rows) - 1) * var(--pz-gap));
+  -webkit-mask-image:var(--puzzle-mask); mask-image:var(--puzzle-mask);
+  -webkit-mask-size:100% 100%; mask-size:100% 100%;
+  -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+  transform:translate(var(--tx,0),var(--ty,0)) rotate(var(--rot,0deg)) scale(.92);
+  opacity:0; filter:blur(12px) brightness(.9);
+  animation:pz-in var(--pz-duration) cubic-bezier(.2,.7,.2,1) forwards;
+}
+@keyframes pz-in{ to{ transform:none; opacity:1; filter:none; } }
+.puzzle-bg.revealed .bg-full{ opacity:1; }
+.puzzle-bg.revealed .pz-piece{ opacity:0; transition:opacity .5s ease; }
+:root{
+  --puzzle-mask:url("data:image/svg+xml;utf8,\
+  <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>\
+  <path fill='white' d='M20,10 h60 a10,10 0 0 1 10,10 v16 c-6,0 -12,5 -12,12 s6,12 12,12 v16 a10,10 0 0 1 -10,10 h-16 c0,-6 -5,-12 -12,-12 s-12,6 -12,12 h-20 a10,10 0 0 1 -10,-10 v-16 c6,0 12,-5 12,-12 s-6,-12 -12,-12 v-16 a10,10 0 0 1 10,-10 z'/>\
+  </svg>");
+}
+
+/* ===========================
+LAYOUT / CARDS
+=========================== */
+body.theme-builder > main.stack{
+  width:100%; max-width:1800px; margin:0 auto;
+  padding:6px 0; display:flex; flex-direction:column; gap:10px;
+}
+body.theme-builder > main.stack > *{ margin:0 !important; }
+
+.card{
+  background:var(--panel-bg);
+  border-radius:var(--radius);
+  border:1px solid var(--stroke);
+  box-shadow:none; padding:10px; position:relative;
+}
+
+.card.offers{
+  overflow:visible;            /* verhindert Clip an der Kartenkante */
+  position:relative;           /* z-index greift nur wenn positioned */
+  z-index:20;
+}
+
+.card.profile{ background:transparent; border:none; box-shadow:none; }
+
+/* ===========================
+PROFILE / AVATAR
+=========================== */
+.profile{ text-align:center; padding:24px 18px; }
+.avatar{
+  width:120px; height:120px; border-radius:50%;
+  margin:-46px auto 8px; border:none; object-fit:cover;
+  background:transparent; box-shadow:none; filter:none;
+}
+.avatar-circle{
+  width:240px; height:240px; border-radius:50%;
+  background-color: color-mix(in oklab, var(--text) 14%, transparent);
+  background-size:cover; background-position:center; background-repeat:no-repeat;
+  margin:0 auto 14px; box-shadow:none; transition:background-image .3s ease;
+}
+
+.title{ font-size:var(--fs-hero); margin:10px 0 2px; line-height:1.15; }
+.brand{ color:var(--brand); }
+.subtitle{ color:var(--subtitle); }
+.desc{ margin-top:8px; text-align:center; margin-inline:auto; max-width:40rem; }
+#about, #about .card-title{ text-align:center; }
+
+/* ===========================
+ICON ROW
+=========================== */
+.icons{
+  display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
+  margin-top:35px;
+}
+.icon-btn{
+  width:60px; height:60px; border-radius:999px;
+  display:grid; place-items:center; text-decoration:none; color:var(--text);
+  border:1.5px solid var(--stroke); background:var(--panel-bg); box-shadow:none;
+  transition:transform .12s ease, background-color .12s ease, opacity .12s ease;
+}
+.icon-btn i{ font-size:var(--icon-size); line-height:1; display:block; }
+.icon-btn:hover{ background:color-mix(in oklab, var(--bg1) 90%, white); transform:translateY(-1px); }
+.icon-btn:active{ transform:translateY(0); }
+
+/* ===========================
+BUTTONS
+=========================== */
+.btn{
+  border:1px solid var(--stroke); border-radius:12px;
+  padding:10px 14px; background:var(--panel-bg); color:var(--text);
+  text-decoration:none; cursor:pointer; font:inherit;
+}
+.btn:hover{ background:color-mix(in oklab, var(--bg1) 90%, white); }
+.btn.primary{ background:var(--brand); color:var(--brand-ink); border:none; }
+.btn.small{ padding:6px 10px; font-size:.9rem; }
+
+/* ===========================
+CONTACT / LEGAL
+=========================== */
+.contact .contact-icons{ display:flex; gap:10px; flex-wrap:wrap; }
+.legal-links{
+  margin-top:10px; display:flex; gap:8px; align-items:center;
+  flex-wrap:wrap; justify-content:center;
+}
+
+/* ===========================
+OFFERS / SHOP – ACCORDION
+=========================== */
+.offers .accordion{
+  margin:0;
+  overflow:visible;            /* darf NICHT clippen */
+}
+.offers .accordion[open]{ overflow:visible; }
+
+.offers summary{
+  list-style:none; display:flex; align-items:center; justify-content:space-between;
+  gap:8px; padding:16px 14px; border-radius:12px; border:1px solid var(--stroke);
+  cursor:pointer; background:var(--panel-bg); font-size:var(--fs-hero); font-weight:600;
+  margin-bottom:14px;
+  position: relative;
+  z-index: 2001;
+  pointer-events: auto;
+}
+.offers summary::-webkit-details-marker{ display:none; }
+.offers .chev{ opacity:.7; transition:transform .2s; }
+.offers details[open] .chev{ transform:rotate(90deg); }
+.offers summary span:nth-child(2){ margin:0 auto; }
+
+/* ===========================
+GENERIC GRID (non-slider)
+=========================== */
+.offers-grid{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr));
+  gap:24px; width:100%; max-width:1800px; margin:0 auto; padding:0 12px;
+}
+
+/* ===========================
+PRODUCT CARD
+=========================== */
+.offer{
+  border-radius:22px; background:rgba(255,255,255,.06);
+  padding:18px; display:flex; flex-direction:column; gap:12px;
+  border:1px solid var(--stroke); position:relative;
+  transform-origin:center; transition:transform .16s ease, box-shadow .16s ease;
+  z-index:1;
+
+}
+
+
+/* Nachbarn während des Hover-Zooms unsichtbar machen */
+#productsGrid.hide-borders .offer{
+  border-color: transparent !important;
+}
+
+
+.offer .media{
+  position:relative; width:100%; aspect-ratio:4/3;
+  border-radius:18px; overflow:hidden; /* Bild sauber maskieren */
+  background:rgba(0,0,0,.25);
+
+}
+.offer .media img{ width:100%; height:100%; object-fit:cover; display:block; }
+.offer .flag{
+  position:absolute; left:12px; top:12px; padding:16px 12px; border-radius:10px;
+  background:rgba(0,0,0,.65); color:#fff; border:1px solid var(--stroke);
+  font-weight:700; font-size:.95rem; backdrop-filter:blur(6px);
+}
+.offer .count{
+  position:absolute; right:12px; bottom:12px; min-width:50px; height:50px; border-radius:999px;
+  display:grid; place-items:center; background:rgba(0,0,0,.65); color:#fff;
+  border:1px solid var(--stroke); font-weight:700; font-size:.95rem;
+}
+.offer .info{ padding-top:8px; display:grid; gap:8px; }
+.offer h3{ margin:0; font-weight:600; }
+.offer .sub{ margin:0; color:var(--muted); font-size:.95rem; }
+
+/* Preis + Warenkorb */
+.price-buy-row{
+  display:flex; align-items:center; justify-content:space-between;
+  width:100%; margin-top:8px;
+}
+.price-buy-row .new{
+  display:inline-block; padding:8px 18px; border-radius:999px;
+  background:#000; color:#fff; font-weight:800; border:2px solid rgba(255,255,255,.35);
+  font-size:1rem; line-height:1;
+}
+.price-buy-row .add-to-cart{
+  width:42px; height:42px; border-radius:50%;
+  background:var(--brand); color:var(--brand-ink);
+  border:none; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; transition:transform .15s ease;
+  margin-right:4px !important;
+}
+.price-buy-row .add-to-cart:hover{ transform:translateY(-2px); }
+
+
+/* === USt Feld neben dem Preis (Builder) === */
+.price-row{ display:flex; align-items:center; gap:.75rem; }
+.vat-inline{ font:inherit; color:var(--text); opacity:.9; display:flex; align-items:center; gap:.35rem; }
+.vat-input{ width:5.5ch; padding:.25rem .4rem; border-radius:8px; border:1px solid var(--stroke); background:var(--glass); color:inherit; }
+
+/* Checkout: Fußnote */
+.ku-hint{ color: var(--subtitle); }
+
+
+/* ===========================
+CART (FLOATING + DRAWER)
+=========================== */
+.cart-fab{
+  position:fixed; right:18px; bottom:18px; z-index:60;
+  border:1px solid var(--stroke); background:var(--panel-bg); color:var(--text);
+  border-radius:999px; padding:12px 14px; box-shadow:none;
+  display:inline-flex; align-items:center; gap:8px;
+}
+#cartCount{
+  display:inline-grid; place-items:center; min-width:22px; height:22px; border-radius:999px;
+  background:var(--brand); color:var(--brand-ink); font-weight:800; font-size:.85rem;
+}
+.cart{
+  position:fixed; right:0; top:0; height:100%; width:min(380px,92vw); z-index:70;
+  background:rgba(18,20,30,.96); border-left:1px solid var(--stroke);
+  transform:translateX(100%); transition:transform .25s ease;
+  display:grid; grid-template-rows:auto 1fr auto;
+}
+.cart.open{ transform:translateX(0); }
+.cart-head,.cart-foot{ padding:14px; border-bottom:1px solid var(--stroke); }
+.cart-foot{
+  border-bottom:none; border-top:1px solid var(--stroke);
+  display:flex; justify-content:space-between; align-items:center;
+}
+.cart-items{ list-style:none; padding:10px 14px; margin:0; display:grid; gap:8px; overflow:auto; }
+.cart-line{
+  display:grid; grid-template-columns:48px 1fr auto auto auto;
+  gap:10px; align-items:center; padding:8px 0;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.cart-line img{ width:48px; height:48px; object-fit:cover; border-radius:8px; }
+.cart-line .meta{ line-height:1.25; }
+.cart-line .qty{ display:flex; align-items:center; gap:6px; }
+
+/* ===========================
+QUICK FAB & BUILDER PANEL
+=========================== */
+.quick-fab{
+  position:fixed; right:18px; bottom:86px; z-index:95;
+  width:56px; height:56px; border-radius:50%;
+  display:grid; place-items:center; border:1.5px solid var(--stroke);
+  background:var(--panel-bg); color:var(--text); box-shadow:none;
+}
+.quick-fab i{ font-size:28px; line-height:1; }
+.quick-panel{
+  position:fixed;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:min(720px,96vw);
+  max-height:80dvh;              /* wie Modal, scrollbar */
+  padding:12px;
+
+  background:var(--modal-bg);
+  border:1px solid var(--modal-border);
+  border-radius:22px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  overflow:auto;
+  overscroll-behavior:contain;
+  z-index:10000;
+}
+.quick-panel[hidden]{ display:none !important; }
+
+.qp-header{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  position:sticky; top:-12px; padding-top:12px;
+  background:linear-gradient(180deg, rgba(0,0,0,.35), transparent 60%);
+}
+.editor-accordion{ display:flex; flex-direction:column; gap:12px; }
+.ed-block{ border:none; border-radius:18px; background:transparent; overflow:clip; }
+.ed-block > summary{
+  list-style:none; cursor:pointer; padding:12px 14px; font-weight:700;
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  border:1px solid var(--stroke); border-radius:18px; background:var(--panel-bg);
+}
+.ed-block > summary::-webkit-details-marker{ display:none; }
+.ed-body{
+  padding:12px; display:grid; gap:10px;
+  border:1px solid var(--stroke); border-top:none;
+  border-bottom-left-radius:18px; border-bottom-right-radius:18px;
+  background:var(--modal-inner);
+}
+.row{ display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; }
+.grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.editable{
+  min-height:38px; border:1px dashed var(--stroke); border-radius:8px; padding:8px; background:rgba(0,0,0,.25);
+}
+
+/* ===========================
+RESPONSIVE BASICS (global)
+=========================== */
+@media (max-width:640px){
+  .grid-2{ grid-template-columns:1fr; }
+  .offers-grid{ padding-inline:8px; gap:16px; }
+}
+
+/* ===============================
+MINI-IMAGE-SLIDER IN CARD
+=============================== */
+.offer .media.slider{ position:relative; overflow:hidden; }
+.offer .media.slider .slide-img{ width:100%; height:100%; object-fit:cover; display:block; margin: 0 auto;
+}
+.offer .media.slider .slide-btn{
+  position:absolute; top:50%; transform:translateY(-50%);
+  width:32px; height:32px; border-radius:50%;
+  border:1px solid var(--stroke); background:rgba(0,0,0,.45); color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:1.1rem; z-index:3; backdrop-filter:blur(4px);
+}
+.offer .media.slider .slide-btn:hover{ background:rgba(255,255,255,.15); }
+.offer .media.slider .prev{ left:10px; }
+.offer .media.slider .next{ right:10px; }
+@media (min-width:768px){
+  .offer .media.slider .slide-btn{ opacity:0; pointer-events:none; transition:opacity .2s ease; }
+  .offer .media.slider:hover .slide-btn{ opacity:1; pointer-events:auto; }
+}
+
+/* =========================================================
+PRODUCT SLIDER – Mindestbreite + zentriert + Breakpoints
+========================================================= */
+
+/* Bühne (Wrapper) */
+.products-row{
+  --cols:5;                      /* Default auf großem Screen */
+  position:relative;
+  width:100%;
+  max-width:1800px;
+  margin:0 auto 12px !important;
+  padding-inline:0;
+  isolation:isolate;             /* Pfeile über Zoom */
+  overflow:visible;              /* nie oben/unten clippen */
+}
+
+/* Desktop/Tablet: horizontaler Track */
+@media (min-width:769px){
+  #productsGrid{
+    display:flex !important;
+    flex-wrap:nowrap !important;
+    gap:var(--prod-gap);
+    justify-content:center;          /* immer zentriert */
+    align-items:stretch;
+    padding-inline:24px;             /* Raum für Edge-Karten */
+    padding-block:56px;              /* Luft oben/unten für Zoom */
+    scroll-padding-inline:24px;
+    overflow-x:auto;                 /* horizontales Scrollen */
+    overflow-y:visible !important;   /* Zoom darf überragen */
+    overscroll-behavior-x:contain;
+    scrollbar-width:none;
+    position:relative; z-index:1;
+  }
+#productsGrid::-webkit-scrollbar{ display:none; }
+
+/* Flexbasis = max(Mindestbreite, Spaltenbreite) → nie abgeschnitten */
+#productsGrid .offer{
+  box-sizing:border-box;
+  flex:0 0 max(
+  var(--card-min),
+  calc((100% - (var(--prod-gap) * (var(--cols) - 1))) / var(--cols))
+  ) !important;
+  min-width:var(--card-min) !important;
+  max-width:none !important;
+
+  /* Basis-Transform neutral (wichtig für Hover) */
+  transform:none;
+  will-change:transform;
+  transition:transform .18s ease, box-shadow .18s ease;
+  z-index:1; position:relative;
+}
+
+/* HOVER: ganze Karte zoomen (kein Bild-only-Zoom) */
+#productsGrid .offer:hover{
+  transform:scale(1.12) !important;
+  box-shadow:none;
+  z-index:5; /* unter Pfeilen */
+}
+
+/* Pfeile */
+.products-arrow{
+  position:absolute; top:50%; transform:translateY(-50%);
+  width:46px; height:46px; border-radius:50%;
+  border:2px solid var(--stroke); background:var(--bg1); color:var(--text);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:1.3rem;
+  transition:opacity .2s ease, visibility .2s ease;
+  box-shadow:0 8px 24px rgba(0,0,0,.25);
+  z-index:2147483647 !important;  /* über Zoom */
+  pointer-events:auto !important;
+}
+.products-arrow.left{ left:12px; visibility:hidden; opacity:0; pointer-events:none; }
+.products-arrow.right{ right:12px; }
+.products-row:not(.is-at-start) .products-arrow.left{ visibility:visible; opacity:1; pointer-events:auto; }
+.products-row.is-at-end .products-arrow.right{ visibility:hidden; opacity:0; pointer-events:none; }
+.products-arrow::after{ content:""; position:absolute; inset:-28px; border-radius:50%; pointer-events:none; }
+}
+
+/* Mobile: untereinander, keine Pfeile */
+@media (max-width:768px){
+  .products-row{ padding:0 8px 20px; }
+  #productsGrid{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:16px; overflow:visible; justify-content:stretch;
+    padding-block:0;
+  }
+#productsGrid .offer{ transform:none; }
+.products-arrow{ display:none; }
+}
+
+/* ===== Feinstufige Breakpoints (nur --cols ändern) ===== */
+@media (min-width:1800px){ .products-row{ --cols:6; } }
+@media (min-width:1440px) and (max-width:1799px){ .products-row{ --cols:5; } }
+@media (min-width:1280px) and (max-width:1439px){ .products-row{ --cols:5; } }
+@media (min-width:1200px) and (max-width:1279px){ .products-row{ --cols:4; } }
+@media (min-width:1100px) and (max-width:1199px){ .products-row{ --cols:4; } }
+@media (min-width:980px)  and (max-width:1099px){ .products-row{ --cols:3; } }
+@media (min-width:900px)  and (max-width:979px) { .products-row{ --cols:3; } }
+@media (min-width:820px)  and (max-width:899px) { .products-row{ --cols:2; } }
+@media (min-width:769px)  and (max-width:819px) { .products-row{ --cols:2; } }
+
+/* ==========================================
+NETFLIX-HOVER-LAYER (für Card-Zoom)
+========================================== */
+#productsHoverLayer{
+  position:fixed;
+  inset:0;
+  pointer-events:none !important;    /* fängt nie Klicks */
+  z-index:2147483000 !important;     /* unter Pfeilen */
+  overflow:visible;
+}
+
+/* Darstellung des geportalten Klons */
+.hover-card{
+  background:rgba(255,255,255,.06);
+  border:1px solid var(--stroke);
+  border-radius:22px;
+}
+
+/* ===========================
+TYPOGRAPHY
+=========================== */
+.hero-title{
+  font-size:clamp(2.6rem, 5vw, 3.4rem);
+  font-weight:700; text-align:center; letter-spacing:-.5px;
+  margin:10px 0 6px; color:var(--text);
+}
+.section-title{
+  font-size:clamp(1.6rem, 3.2vw, 2.2rem);
+  font-weight:600; text-align:center; margin:0 auto 14px;
+  color:var(--text); opacity:.95;
+}
+
+/* ===========================
+FOOTER
+=========================== */
+#about .card{
+  max-width:1200px; margin:0 auto;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--stroke);
+  border-radius:22px; padding:24px 18px;
+}
+#about .card-title{
+  font-size:clamp(1.6rem, 3.2vw, 2.2rem);
+  font-weight:700; margin:0 0 10px;
+}
+#about .desc{ max-width:40rem; margin-inline:auto; color:var(--muted); }
+.legal-links{ margin-top:14px; gap:12px; font-weight:500; opacity:.9; }
+.legal-links a{ color:var(--text); text-decoration:none; opacity:.9; }
+.legal-links a:hover{ text-decoration:underline; }
+footer.footnote{
+  margin:0 !important; padding:14px 0 18px !important;
+  text-align:center; color:var(--muted); opacity:.9;
+  border-top-color:transparent !important;
+  border-top-width:0 !important;
+}
+
+/* ===========================
+QR MODAL
+=========================== */
+.qr-code-box{ position:relative; display:grid; place-items:center; margin-top:8px; }
+.qr-code-box canvas,.qr-code-box img{
+  display:block; max-width:100%; height:auto; image-rendering:crisp-edges;
+}
+.qr-modal{
+  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+  background:var(--modal-overlay); backdrop-filter:blur(6px); z-index:9999;
+}
+
+.qr-modal.open{ display:flex; }
+.qr-dialog{
+  background:var(--modal-bg);
+  border:1px solid var(--card-border, rgba(255,255,255,.08));
+  border-radius:22px; box-shadow:0 10px 40px rgba(0,0,0,.4);
+  width:min(92vw,520px); padding:24px; color:inherit; font:inherit;
+}
+#qr-title{ margin:0 0 12px; text-align:center; font-size:1.25rem; font-weight:600; }
+.qr-actions{ display:flex; justify-content:center; gap:12px; margin-top:18px; }
+
+/* ===========================
+BUILDER LOCK (wie Legal Modal)
+=========================== */
+.builder-overlay{
+  position:fixed;
+  inset:0;
+  display:block;
+  background:var(--modal-overlay);
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  z-index:9998; /* unter quick-panel (10000) */
+}
+.builder-overlay[hidden]{ display:none; }
+
+/* optional: Body sperren */
+body.builder-open{
+  overflow:hidden;
+}
+
+
+/* ===========================
+ANTI-CLIP & HOVER SAFETY
+=========================== */
+#offers,
+#offers .accordion,
+#offers details,
+.card.offers,
+.products-row{
+  overflow:visible !important; /* sicherheitshalber nie clippen */
+}
+.card.offers::before,
+.card.offers::after,
+.products-row::before,
+.products-row::after,
+#productsGrid::before,
+#productsGrid::after{
+  content:none !important;
+  -webkit-mask:none !important;
+  mask:none !important;
+  clip-path:none !important;
+  pointer-events:none !important;
+}
+.offer .media,
+.offer:hover .media{
+  transform:none !important;  /* kein Bild-only-Zoom */
+}
+
+/* ============================================================
+MOBILE-LAYOUT (<= 768px) – Karten dürfen NICHT zoomen
+============================================================ */
+@media (max-width: 768px) {
+  #productsGrid .offer {
+    transform: none !important;
+  }
+
+#productsGrid .offer:hover {
+  transform: none !important;
+}
+
+/* Ghost-Layer / Klon auf Mobile komplett ausschalten */
+#productsHoverLayer {
+  display: none !important;
+}
+}
+
+/* ============================================================
+Fallback-Kontrolle über JS-Schalter (falls Breakpoint kippt)
+============================================================ */
+body.no-hover-zoom #productsGrid .offer:hover { transform: none !important; }
+body.no-hover-zoom #productsHoverLayer { display: none !important; }
+
+
+/* ===== LEGAL MODAL (groß & scrollbar) ===== */
+.legal-dialog{
+  width:min(96vw, 860px);
+  max-height:80dvh;
+  display:flex;
+  flex-direction:column;
+  padding:28px;
+}
+
+.legal-body{
+  margin-top:8px;
+  padding-right:4px;
+  overflow:auto;
+  /* Lesbarer Body-Hintergrund, farblich im System */
+  background:var(--modal-inner);
+  border:1px solid var(--stroke);
+  border-radius:14px;
+  padding:14px;
+}
+
+/* Buttons im Modal an dein Brand anlehnen */
+.legal-actions .btn.small{
+  min-width:110px;
+}
+
+@media (max-width:640px){
+  .legal-dialog{ width:min(96vw, 96vw); padding:18px; }
+}
+
+
+/* sorgt dafür, dass der Shop-Block nach dem Sprung nicht am oberen Rand klebt 29.11 */
+#offers { scroll-margin-top: 24px; }  /* ggf. 60–80px wählen */
+
+
+/* ===== Versand-Editor Layout ===== */
+.ship-editor {
+  border: 1px dashed var(--stroke);
+  padding: 12px;
+  border-radius: 12px;
+  margin-top: 14px;
+}
+
+.ship-row {
+  display: grid;
+  grid-template-columns: 24px 1fr 80px;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.ship-label {
+  font-size: 0.95rem;
+}
+
+.ship-price {
+  width: 80px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--stroke);
+  background: var(--glass);
+  color: var(--text);
+}
+
+
+/* ===========================================
+Links-Editor – NEUES Layout wie Zeichnung
+=========================================== */
+
+/* Zeilenlayout: Prefix | großes Inputfeld | Button rechts */
+.links-inputs{
+  display:grid;
+  grid-template-columns: auto 1fr auto;
+  gap:10px;
+  align-items:center;
+  width:100%;
+}
+
+/* Prefix kompakter */
+.prefix{
+  padding:8px 12px;
+  border:1px solid var(--stroke);
+  border-radius:10px;
+  background:var(--glass);
+  white-space:nowrap;
+  font-size:0.9rem;
+}
+
+/* Input viel breiter machen */
+.links-input{
+  width:100%;
+  padding:10px 14px;
+  border-radius:10px;
+  border:1px solid var(--stroke);
+  background:var(--glass);
+  color:var(--text);
+  font-size:1rem;
+}
+
+/* Button immer RECHTSBÜNDIG */
+.links-inputs .btn.small{
+  justify-self:end;
+  height:38px;
+  padding:0 18px;
+  display:flex;
+  align-items:center;
+}
+
+/* Domain-Zeile: dieselbe Optik */
+#saveDomain.btn.small{
+  justify-self:end;
+}
+
+/* Mobile: alles untereinander */
+@media (max-width:640px){
+  .links-inputs{
+    grid-template-columns:1fr;
+  }
+.links-inputs .btn.small{
+  justify-self:stretch;
+}
+}
+/* Rahmen wie vorher wiederherstellen */
+.links-editor{
+  border:1px dashed var(--stroke);
+  background:rgba(0,0,0,0.15);   /* leicht transparent wie die anderen Panels */
+  padding:14px;
+  border-radius:14px;
+}
+
+#saveDomain.btn.small {
+  background: var(--panel-bg);      /* gleiche Farbe wie Kopieren */
+  color: var(--text);
+  border: 1px solid var(--stroke);  /* gleiche Border */
+  height: 36px;                     /* gleiche Höhe */
+  min-width: 120px;                 /* gleiche Breite */
+}
+#saveDomain.btn.small:hover {
+  background: color-mix(in oklab, var(--bg1) 90%, white);
+}
+
+
+/* Footer wieder zentrieren (stabil gegen Flex/Overrides) */
+.site-footer{
+  width: 100%;
+  display: block;
+  text-align: center;
+}
+
+.site-footer .footer-inner{
+  width: 100%;
+  max-width: 1100px;  /* falls du woanders eine andere max-width nutzt, sag mir die, dann setz ich sie passend */
+  margin: 0 auto;
+  padding: 14px 16px;
+  text-align: center;
+}
+
+/* falls irgendwo Flex greift */
+.site-footer,
+.site-footer .footer-inner{
+  justify-content: center;
+}
+
+#quickFab[hidden],
+#quickPanel[hidden]{
+  display:none !important;
+}

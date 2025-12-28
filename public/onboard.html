@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="de">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="noindex,nofollow" name="robots"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>
+   Dotagora — Onboarding
+  </title>
+  <link href="styles.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
+  <style>
+   /* ===== Farbschema (lila) – bei Bedarf anpassen ===== */
+    :root{
+      --bg1:#6f5aa8;               /* Hintergrund */
+      --panel-bg:#9f87d8;          /* Karten/Felder */
+      --text:#ecdcff;              /* Text */
+      --subtitle: color-mix(in oklab, var(--text) 70%, #ffffff 0%);
+      --brand:#c58bff;             /* Primär-Button */
+      --brand-ink:#3b184e;
+      --stroke: rgba(255,255,255,.18);
+      --glass: rgba(255,255,255,.10);
+    }
+
+    /* ===== Layout: Topbar ===== */
+    .topbar{
+      max-width:1800px; margin:0 auto; padding:10px 14px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .brandmark{
+      display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text);
+      font-weight:800; letter-spacing:.2px;
+    }
+    .brandmark .logo{
+      width:34px; height:34px; border-radius:999px; display:grid; place-items:center;
+      background:color-mix(in oklab, var(--panel-bg) 70%, #fff 0%);
+      border:2px solid color-mix(in oklab, var(--text) 25%, transparent);
+    }
+    .brandmark .logo i{ font-size:18px; }
+
+    .auth-links{ display:flex; align-items:center; gap:10px; }
+    .btn.linkish{
+      background:transparent; border:1px solid var(--stroke);
+      padding:8px 12px; border-radius:10px; color:var(--text);
+      text-decoration:none; display:inline-flex; align-items:center; gap:8px;
+    }
+    .btn.primary{ background:var(--brand); color:var(--brand-ink); border:none; }
+
+    /* ===== Ticker mit Preview-Karten ===== */
+ .ticker-wrap{
+  overflow:hidden;
+  width:100%;
+  margin:10px 0 6px;
+}
+
+.ticker{
+  display:flex;
+  gap:16px;
+  width:max-content;
+  animation:ticker-scroll 26s linear infinite;
+}
+
+@keyframes ticker-scroll{
+  from{ transform:translateX(0); }
+  to{ transform:translateX(-50%); }
+}
+
+.preview-card{
+  flex:0 0 220px;
+  height:300px;
+  border-radius:18px;
+  background:rgba(255,255,255,.15);
+  border:1px solid rgba(255,255,255,.25);
+  display:grid;
+  place-items:center;
+  font-weight:700;
+  font-size:1.4rem;
+  color:#fff;
+}
+
+    /* ===== Header / zentrales Logo + Titel ===== */
+    header.card.profile{ padding-top:28px; }
+    .center-logo{
+      display:grid; place-items:center; gap:8px; margin:26px auto 6px;
+    }
+    .center-logo .puzzle{
+      width:min(120px,24vw); aspect-ratio:1/1; border-radius:50%;
+      display:grid; place-items:center;
+      background: color-mix(in oklab, var(--panel-bg) 85%, transparent);
+      border:3px solid color-mix(in oklab, var(--text) 35%, transparent);
+      color: color-mix(in oklab, var(--text) 85%, #000 0%);
+    }
+    .center-logo .puzzle i{ font-size: clamp(42px, 8vw, 64px); }
+    .center-logo .brand-name{
+      font-size: clamp(26px, 4.4vw, 36px); font-weight:800; letter-spacing:.4px; color:var(--text);
+    }
+
+    /* ===== Erklär-Chips ===== */
+    .explain-row{
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+      gap:14px; margin-top:18px;
+    }
+    .explain-chip{
+      background:var(--panel-bg); border:1px dashed var(--stroke);
+      border-radius:14px; padding:16px 18px; font-weight:600; color:var(--text);
+      font-size:16px; line-height:1.4; text-align:center;
+    }
+    .explain-chip strong{ color:#fff; }
+
+    /* ===== Formular – schmaler/kompakter ===== */
+    .contact .form-grid{
+      max-width:520px;              /* << schmaler */
+      margin:10px auto 0; display:grid; gap:10px;
+    }
+    .contact label{ font-size:14px; opacity:.95 }
+    .contact input{
+      width:100%; padding:.72rem .9rem; border-radius:12px;
+      border:1px solid var(--stroke);
+      background: color-mix(in oklab, #ffffff 12%, var(--panel-bg) 88%);
+      color:var(--text);
+    }
+    .hint{ text-align:center; font-size:.95rem; color:var(--subtitle); margin-top:8px; }
+    .legal-inline a{
+      color:var(--text); text-decoration:underline; cursor:pointer;
+    }
+  </style>
+ </head>
+ <body class="theme-builder">
+  <!-- Hintergrund wie index -->
+  <video aria-hidden="true" autoplay="" class="bg-video" loop="" muted="" playsinline="" poster="video-poster.jpg">
+   <source src="transparency.mp4" type="video/mp4"/>
+  </video>
+  <div aria-hidden="true" class="bg-overlay">
+  </div>
+  <div class="puzzle-bg" id="puzzle">
+   <div class="bg-full">
+   </div>
+  </div>
+  <!-- Topbar: kleines Logo + Auth -->
+  <div class="topbar">
+   <a aria-label="OneDot Home" class="brandmark" href="#">
+    <span class="logo">
+     <i class="bi bi-puzzle-fill">
+     </i>
+    </span>
+    <span>
+     OneDot
+    </span>
+   </a>
+   <div class="auth-links">
+    <a class="btn linkish" href="#register" title="Zum Login">
+     Login
+    </a>
+    <a class="btn primary" href="#register" title="Jetzt registrieren">
+     Registrieren
+    </a>
+   </div>
+  </div>
+  <!-- Ticker -->
+  <!-- Laufende Preview-Leiste (unverändert / neutral) -->
+  <div class="ticker-wrap">
+   <div class="ticker">
+    <!-- Set 1 -->
+    <div class="preview-card">
+     o₂
+    </div>
+    <div class="preview-card">
+     Sparkasse
+    </div>
+    <div class="preview-card">
+     ●
+    </div>
+    <div class="preview-card">
+     Shop
+    </div>
+    <div class="preview-card">
+     QR
+    </div>
+    <!-- Set 2 (Duplikat für Endlosschleife) -->
+    <div class="preview-card">
+     o₂
+    </div>
+    <div class="preview-card">
+     Sparkasse
+    </div>
+    <div class="preview-card">
+     ●
+    </div>
+    <div class="preview-card">
+     Shop
+    </div>
+    <div class="preview-card">
+     QR
+    </div>
+   </div>
+  </div>
+  <main class="stack">
+   <!-- Header-Block -->
+   <header class="card profile" data-module="">
+    <!-- großes Puzzle-Logo mittig + Name -->
+    <div class="center-logo">
+     <div class="puzzle">
+      <i aria-hidden="true" class="bi bi-puzzle-fill">
+      </i>
+     </div>
+     <div class="brand-name">
+      Dotagora
+     </div>
+    </div>
+    <h1 class="hero-title">
+     Deine digitale Visitenkarte – Übersichtlich, sofort einsatzbereit und überall teilbar.
+    </h1>
+    <p class="subtitle">
+     Definiere deinen Slug, personalisiere die Seite mit wenigen Klicks – fertig ist deine rechtssichere Website.
+        Ideal für Creator, Freelancer &amp; kleine Unternehmen.
+    </p>
+    <div class="explain-row">
+     <div class="explain-chip">
+      <strong>
+       Klare Link-in-Bio-Lösung:
+      </strong>
+      <br/>
+      Alle Kontaktwege in einem Link.
+     </div>
+     <div class="explain-chip">
+      <strong>
+       QR-Code inklusive und mobile Version first:
+      </strong>
+      <br/>
+      Du erhältst einen QR-Code, der auf deine Seite führt.
+     </div>
+     <div class="explain-chip">
+      <strong>
+       Vorgefertigte Rechtstexte:
+      </strong>
+      <br/>
+      Impressum, Datenschutz &amp; AGB inklusive.
+     </div>
+     <div class="explain-chip">
+      <strong>
+       Erweiterbar:
+      </strong>
+      <br/>
+      Mini-Shop, Bewertungen, Services – wenn du sie brauchst.
+     </div>
+    </div>
+   </header>
+   <!-- Registrieren -->
+   <section class="card contact" data-module="" id="about">
+    <h2 class="section-title">
+     Lass uns loslegen!
+    </h2>
+    <p class="subtitle desc">
+     Erstelle deinen Zugang – wir führen dich danach direkt in den Builder.
+    </p>
+    <div aria-label="Onboarding" class="form-grid" id="register" role="form">
+     <div>
+      <label for="email">
+       E-Mail
+      </label>
+      <input autocomplete="email" id="email" inputmode="email" placeholder="max@firma.at" type="email"/>
+     </div>
+     <div>
+      <label for="pw">
+       Passwort
+      </label>
+      <input autocomplete="new-password" id="pw" placeholder="••••••••" type="password"/>
+     </div>
+     <div>
+      <label for="pw2">
+       Passwort bestätigen
+      </label>
+      <input autocomplete="new-password" id="pw2" placeholder="••••••••" type="password"/>
+     </div>
+     <div style="display:flex; justify-content:center; gap:10px; margin-top:6px;">
+      <button class="btn primary" id="btnRegister" type="button">
+       Registrieren
+      </button>
+      <a class="btn linkish" href="#login" id="btnLogin">
+       Login
+      </a>
+     </div>
+     <div class="hint legal-inline">
+      Mit Klick auf
+      <strong>
+       „Registrieren“
+      </strong>
+      bestätige ich die
+      <a class="legal-open" data-legal="terms" href="#">
+       AGB
+      </a>
+      und die
+      <a class="legal-open" data-legal="privacy" href="#">
+       Datenschutzerklärung
+      </a>
+      .
+     </div>
+    </div>
+   </section>
+   <div class="legal-links" style="margin-top:26px !important;">
+    <button class="btn small legal-open" data-legal="imprint" type="button">
+     Impressum
+    </button>
+   </div>
+   <footer class="footnote" style="padding-top:3px !important;">
+    ©
+    <span id="year">
+    </span>
+    Dotagroa
+   </footer>
+  </main>
+  <!-- Legal Modal -->
+  <div aria-hidden="true" class="qr-modal" id="legal-modal">
+   <div aria-labelledby="legal-title" aria-modal="true" class="qr-dialog legal-dialog" role="dialog">
+    <h2 id="legal-title">
+     Rechtliches
+    </h2>
+    <div class="legal-body" id="legal-body">
+    </div>
+    <div class="qr-actions legal-actions">
+     <button class="btn small" id="legal-close" type="button">
+      Schließen
+     </button>
+    </div>
+   </div>
+  </div>
+  <script>
+   const $  = (s, r=document)=>r.querySelector(s);
+    const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+    try { $('#year').textContent = new Date().getFullYear(); } catch {}
+
+    // Demo-Navigation – später durch echtes Backend ersetzen
+    $('#btnRegister')?.addEventListener('click', (e)=>{
+      e.preventDefault();
+      location.href = '/builder';
+    });
+
+
+// Legal-Modal (anklickbare Links)
+const LEGAL_TEXTS = {
+  imprint:`<h3>Impressum</h3><p>Dein Unternehmensname<br>Adresse<br>E-Mail: hallo@firma.at</p>`,
+  privacy:`<h3>Datenschutzerklärung</h3><p>Hier steht deine Datenschutzerklärung.</p>`,
+  terms:`<h3>AGB</h3><p>Hier stehen deine Allgemeinen Geschäftsbedingungen.</p>`
+};
+
+const legalModal = $('#legal-modal');
+
+function openLegal(which){
+  $('#legal-body').innerHTML = LEGAL_TEXTS[which] || '';
+
+  // ✅ wichtig: CSS erwartet .open
+  legalModal.classList.add('open');
+
+  // (optional aber sauber für Barrierefreiheit)
+  legalModal.setAttribute('aria-hidden','false');
+}
+
+function closeLegal(){
+  legalModal.classList.remove('open');
+  legalModal.setAttribute('aria-hidden','true');
+}
+
+$$('.legal-open').forEach(el =>
+  el.addEventListener('click', (e)=>{
+    e.preventDefault();
+    openLegal(el.dataset.legal);
+  })
+);
+
+$('#legal-close')?.addEventListener('click', closeLegal);
+
+legalModal?.addEventListener('click',(e)=>{
+  if(e.target === legalModal) closeLegal();
+});
+
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape') closeLegal();
+});
+
+
+    // Ticker pausieren bei Hover
+    const ticker = document.querySelector('.ticker');
+    ticker?.addEventListener('mouseenter', ()=> ticker.style.animationPlayState='paused');
+    ticker?.addEventListener('mouseleave', ()=> ticker.style.animationPlayState='running');
+  </script>
+ </body>
+</html>

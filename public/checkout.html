@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="de">
+ <head>
+  <meta charset="utf-8"/>
+  <title>
+   Checkout | OneDot
+  </title>
+  <meta content="width=device-width,initial-scale=1" name="viewport"/>
+  <meta content="#0a0b0f" name="theme-color"/>
+  <!-- Base Styles deiner Seite -->
+  <link href="styles.css" rel="stylesheet"/>
+  <!-- Stripe JS -->
+  <script src="https://js.stripe.com/v3">
+  </script>
+  <style>
+   /* --- schlanke Zusatz-Styles für Checkout, bauen auf deinen Variablen auf --- */
+    :root{
+--card-bg: var(--glass);
+  --card-border: var(--stroke);
+  --field-bg: color-mix(in oklab, var(--bg1) 50%, white 5%);
+  --field-border: var(--stroke);
+      --ok: #29d27d;
+      --warn: #ffd25f;
+      --err: #ff6b6b;
+    }
+
+    body.theme-builder > main.checkout{
+      width:100%;
+      max-width:1800px;
+      margin:0 auto;
+      padding:20px 20px 20px;
+      display:grid;
+      gap:16px;
+    }
+
+
+.co-grid{
+  display:grid;
+  grid-template-columns: 1.25fr .75fr; /* Desktop: Adresse breiter */
+  gap:16px;
+}
+
+/* ≤1280px: 50/50 */
+@media (max-width: 1280px){
+  .co-grid{ grid-template-columns: 1fr 1fr; }
+}
+
+/* ≤1200px: untereinander (früher Break, damit nix gequetscht wird) */
+@media (max-width: 1200px){
+  .co-grid{ grid-template-columns: 1fr; }
+}
+
+
+    .panel{
+      background: var(--card-bg);
+      border:1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 16px;
+    }
+    .panel h2{
+      margin:0 0 10px;
+      font-size: clamp(1.2rem, 2.2vw, 1.5rem);
+}
+.panel-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+@media (max-width: 640px){
+  .panel-head{ flex-wrap:wrap; }
+  .panel-head .btn{ order:2; }
+}
+
+
+    .row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .row-3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+    .row-4{ display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; }
+    .row-1{ display:grid; grid-template-columns:1fr; gap:10px; }
+    @media (max-width: 768px){
+      .row, .row-3, .row-4{ grid-template-columns:1fr; }
+    }
+    label small{ color: var(--subtitle); }
+    .field{
+      background: var(--field-bg);
+      border:1px solid var(--field-border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: inherit; font: inherit; width: 100%;
+    }
+    select.field{ appearance: none; }
+    .inline{
+      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    }
+    .btn.primary{
+      background: var(--brand);
+      color: var(--brand-ink);
+      border: none;
+      font-weight: 700;
+    }
+    .btn.block{ width:100%; }
+    .muted{ color: var(--subtitle); }
+    .hr{ height:1px; background:rgba(255,255,255,.12); margin:12px 0; border:none; }
+
+    /* Warenkorb Tabelle */
+    .cart-table{ width:100%; border-collapse: separate; border-spacing: 0 8px; }
+    .cart-table th, .cart-table td{
+      padding:10px; border-bottom:1px solid rgba(255,255,255,.08); vertical-align:middle;
+    }
+    .qtyctl{ display:inline-flex; align-items:center; border:1px solid var(--field-border); border-radius:10px; overflow:hidden; }
+    .qtyctl button{ background:transparent; border:none; color:inherit; width:32px; height:32px; cursor:pointer; }
+    .qtyctl input{ width:42px; text-align:center; background:transparent; border:none; color:inherit; font:inherit; }
+    .line-right{ text-align:right; white-space:nowrap; }
+
+    /* Summenbox */
+    .totals{ display:grid; gap:8px; }
+    .totals .rowline{ display:flex; justify-content:space-between; align-items:center; }
+    .totals .grand{ font-weight:800; font-size:1.1rem; }
+
+    /* Payment Element Box */
+    #payment-area{ display:none; }
+    #payment-area.active{ display:block; }
+    .pm-note{ font-size:.9rem; }
+
+    /* Hinweise */
+    .note-ok{ color: var(--ok); }
+    .note-warn{ color: var(--warn); }
+    .note-err{ color: var(--err); }
+
+    /* Kleinigkeiten */
+    .badge{
+      display:inline-block; padding:6px 10px; border-radius:999px;
+      background:#000; color:#fff; border:2px solid rgba(255,255,255,.35); font-weight:800;
+      font-size:.95rem; line-height:1;
+    }
+    .ship-pill{
+      display:flex; align-items:center; gap:8px; padding:10px; border:1px solid var(--field-border);
+      border-radius:12px; cursor:pointer;
+    }
+    .ship-pill input{ accent-color: var(--brand); }
+    .brand-ink{ color: var(--brand-ink); }
+
+
+button.link{
+  background:none; border:none; padding:0;
+  color:inherit; text-decoration:underline; cursor:pointer; font:inherit;
+}
+button.link:hover{ opacity:.9; text-decoration: underline; }
+
+
+.cart-table tr{
+  position: relative;
+  isolation: isolate;              /* eigener Stacking-Context -> nichts überlappt */
+}
+
+/* Jede Zelle bekommt einen leichten Hintergrund; die äußeren Ecken sind rund */
+.cart-table tr > td{
+  background: rgba(255,255,255,.04);
+}
+.cart-table tr > td:first-child{
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  overflow: hidden;                /* Bild/Titel schneiden an der Kante sauber ab */
+}
+.cart-table tr > td:last-child{
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  overflow: hidden;
+}
+
+/* Abstand zwischen Titel (Spalte 1) und Mengen-Buttons (Spalte 2) */
+.cart-table td:first-child{ padding-right: 8px; }
+.cart-table td:nth-child(2){ padding-left: 8px; }
+
+/* Bild/Titel dürfen schrumpfen und laufen nicht in Buttons hinein */
+.cart-table td:first-child > div{ min-width: 0; display:flex; align-items:center; gap:10px; }
+.cart-table td:first-child > div > div{ min-width:0; }
+.cart-table td:first-child strong{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.cart-table td:first-child .muted.small{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* Mengensteuerung und Preis bleiben obenauf (über dem Zellhintergrund) */
+.qtyctl, .line-right, .btn[data-act="rm"]{ position: relative; z-index: 1; }
+
+@media (max-width: 480px){
+
+  /* Tabelle -> Kartenlayout */
+  .cart-table{
+    display:block;
+    width:100%;
+    max-width:100%;
+    border-spacing: 0;          /* wichtig: keine Tabellen-"Lücken" */
+    table-layout: auto !important;
+  }
+  .cart-table thead{ display:none; }
+  .cart-table tbody{
+    display:block;
+    width:100%;
+    max-width:100%;
+  }
+
+  /* === AUSSENBLOCK (KARTE) – bleibt wie Ursprung, aber resize/zoom-sicher === */
+  .cart-table tr{
+    display:grid;
+    grid-template-columns: minmax(0, 1fr) minmax(11rem, max-content); /* links flexibel, rechts nie Mini */
+    gap:8px;
+    padding:10px;
+    border-radius:12px;
+    background: rgba(255,255,255,.04);
+
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box;
+
+    /* sorgt dafür, dass die Karte nicht "shrink-to-fit" macht */
+    margin: 0 0 8px 0;
+  }
+
+  /* Zellen neutralisieren (verhindert, dass spätere width%-Regeln reinfunken) */
+  .cart-table tr > td{
+    background:none;
+    padding:0;
+    width:auto !important;
+    max-width:none !important;
+    min-width:0 !important;
+  }
+
+  /* Artikel */
+  .cart-table td:nth-child(1){
+    grid-column:1 / -1;         /* volle Breite */
+    min-width:0;
+  }
+
+  /* Menge */
+  .cart-table td:nth-child(2){
+    grid-column:1 / 2;
+    justify-self:start;
+    min-width:0;
+  }
+
+  /* Preis + USt + Entfernen */
+  .cart-table td:nth-child(3){
+    grid-column:2 / 3;
+    justify-self:stretch;       /* damit rechts nicht "klebt" */
+    text-align:right;
+    min-width:11rem;            /* verhindert Buchstaben-Spalte */
+  }
+
+  /* Preiszeile */
+  .cart-table td:nth-child(3) > div:first-child{
+    white-space:nowrap;
+    font-weight:700;
+  }
+
+  /* USt-Text – lesbar, ohne buchstabenweisen Umbruch */
+  .cart-table td:nth-child(3) .muted.small{
+    white-space:normal;
+    overflow-wrap:break-word;
+    word-break:normal;
+    line-height:1.3;
+    text-align:right;
+  }
+
+  /* Entfernen – sauber, kein komischer Umbruch */
+  .cart-table td:nth-child(3) .btn.small{
+    margin-top:6px;
+    white-space:nowrap;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  /* Mengen-Controller kompakter */
+  .qtyctl button{ width:28px; height:28px; }
+  .qtyctl input{ width:38px; }
+}
+
+
+/* 769–991px: noch mehr Platz für Titel */
+@media (max-width: 991px){
+  .cart-table th:nth-child(1), .cart-table td:nth-child(1){ width:65%; }
+  .cart-table th:nth-child(2), .cart-table td:nth-child(2){ width:18%; }
+  .cart-table th:nth-child(3), .cart-table td:nth-child(3){ width:17%; }
+  .cart-table th, .cart-table td{ padding:8px; }   /* etwas kompakter */
+  .qtyctl input{ width:38px; }
+}
+
+/* ≤768px greift bereits dein Mobile-Kartenlayout (grid), daher kein Tabellen-Tuning nötig */
+
+
+/* Pflichtfeld-Stern direkt im Text, gleiche Schriftfarbe */
+label .req {
+  color: inherit;
+  font-weight: inherit;
+  margin-left: 0.15rem; /* sehr klein, wie Shops es machen */
+}
+
+/* optional: roter Glow, wenn wir zum Fehler springen */
+.field.invalid-glow{
+  outline:2px solid var(--err);
+  box-shadow:0 0 0 3px color-mix(in oklab, var(--err) 35%, transparent);
+  transition:box-shadow .25s ease, outline-color .25s ease;
+}
+  </style>
+ </head>
+ <body class="theme-builder">
+  <main class="checkout">
+   <header class="panel">
+    <h1 class="hero-title" style="margin:0">
+     Checkout
+    </h1>
+    <p class="subtitle" id="shopSub">
+     Sichere Zahlung &amp; sofortige Bestellbestätigung.
+    </p>
+   </header>
+   <section class="co-grid">
+    <!-- Linke Spalte: Kundendaten / Adressen / Versand -->
+    <div class="panel">
+     <h2>
+      Kundendaten &amp; Rechnung
+     </h2>
+     <form autocomplete="on" class="row-1" id="co-form">
+      <!-- Kundendaten für die Rechnung -->
+      <div class="row">
+       <label>
+        Vorname
+        <span class="req">
+         *
+        </span>
+        <input class="field" name="firstName" required=""/>
+       </label>
+       <label>
+        Nachname
+        <span class="req">
+         *
+        </span>
+        <input class="field" name="lastName" required=""/>
+       </label>
+      </div>
+      <div class="row">
+       <label>
+        E-Mail
+        <span class="req">
+         *
+        </span>
+        <input class="field" name="email" required="" type="email"/>
+       </label>
+       <label>
+        Telefon
+        <input class="field" name="phone" type="tel"/>
+       </label>
+      </div>
+      <div class="row">
+       <label>
+        Firma
+        <input class="field" name="company"/>
+       </label>
+       <label>
+        USt-ID / VAT
+        <input class="field" name="vatId" placeholder="z. B. ATU…"/>
+       </label>
+      </div>
+      <!-- Rechnungsadresse -->
+      <h3 style="margin:6px 0">
+       Rechnungsadresse
+      </h3>
+      <div class="row">
+       <label>
+        Straße &amp; Nr.
+        <span class="req">
+         *
+        </span>
+        <input class="field" name="billStreet" required=""/>
+       </label>
+       <label>
+        Zusatz
+        <input class="field" name="billLine2"/>
+       </label>
+      </div>
+      <div class="row-3">
+       <label>
+        PLZ
+        <span class="req">
+         *
+        </span>
+        <input class="field" name="billZip" required=""/>
+       </label>
+       <label>
+        Stadt
+        <span class="req">
+         *
+        </span>
+        <input class="field" name="billCity" required=""/>
+       </label>
+       <label>
+        Land
+        <span class="req">
+         *
+        </span>
+        <input class="field" id="billCountry" name="billCountry" placeholder="z. B. Österreich, Deutschland, Ghana" required=""/>
+       </label>
+      </div>
+      <!-- Lieferadresse -->
+      <div class="inline">
+       <input checked="" id="shipSame" type="checkbox"/>
+       <label for="shipSame">
+        Lieferadresse = Rechnungsadresse
+       </label>
+      </div>
+      <div class="row-1" id="shipBox" style="display:none;">
+       <h3 style="margin:6px 0">
+        Lieferadresse
+       </h3>
+       <div class="row">
+        <label>
+         Straße &amp; Nr.
+         <span class="req ship-req">
+          *
+         </span>
+         <input class="field" name="shipStreet"/>
+        </label>
+        <label>
+         Zusatz
+         <input class="field" name="shipLine2"/>
+        </label>
+       </div>
+       <div class="row-3">
+        <label>
+         PLZ
+         <span class="req ship-req">
+          *
+         </span>
+         <input class="field" name="shipZip"/>
+        </label>
+        <label>
+         Stadt
+         <span class="req ship-req">
+          *
+         </span>
+         <input class="field" name="shipCity"/>
+        </label>
+        <label>
+         Land
+         <span class="req ship-req">
+          *
+         </span>
+         <input class="field" id="shipCountry" name="shipCountry" placeholder="Land (frei eingeben)"/>
+        </label>
+       </div>
+      </div>
+      <!-- Versandart -->
+      <h3 style="margin:6px 0">
+       Versand
+      </h3>
+      <p class="muted note-free">
+       Gratisversand ab
+       <strong id="freeNote">
+        89,00 €
+       </strong>
+       Warenwert.
+      </p>
+      <div class="row-1" id="shipMethods">
+       <label class="ship-pill">
+        <input checked="" data-days="3-5" name="shipMethod" type="radio" value="standard"/>
+        <div>
+         <div>
+          <strong>
+           Standard
+          </strong>
+          —
+          <span class="muted">
+           3–5 Werktage
+          </span>
+         </div>
+         <div class="muted small" id="shipPriceLabel">
+          €0,00
+         </div>
+        </div>
+       </label>
+       <label class="ship-pill">
+        <input data-days="Abholung" name="shipMethod" type="radio" value="pickup"/>
+        <div>
+         <div>
+          <strong>
+           Abholung
+          </strong>
+          —
+          <span class="muted">
+           heute/morgen
+          </span>
+         </div>
+         <div class="muted small">
+          €0,00
+         </div>
+        </div>
+       </label>
+      </div>
+      <!-- Hinweise / AGB -->
+      <div class="row-1">
+       <label>
+        Bestellnotiz
+        <small>
+         (optional)
+        </small>
+        <textarea class="field" name="note" placeholder="Hinweise für Lieferung, Geschenk, etc." rows="3"></textarea>
+       </label>
+       <div class="inline">
+        <input id="agreeTerms" required="" type="checkbox"/>
+        <label for="agreeTerms">
+         Ich akzeptiere
+         <button class="link legal-open" data-legal="terms" type="button">
+          AGB
+         </button>
+         &amp;
+         <button class="link legal-open" data-legal="revocation" type="button">
+          Widerrufsbelehrung
+         </button>
+         .
+        </label>
+       </div>
+       <div class="inline">
+        <input id="agreePrivacy" required="" type="checkbox"/>
+        <label for="agreePrivacy">
+         Ich stimme der Verarbeitung meiner Daten gemäß
+         <button class="link legal-open" data-legal="privacy" type="button">
+          Datenschutzerklärung
+         </button>
+         zum Zweck der Bestellabwicklung zu.
+        </label>
+       </div>
+      </div>
+      <p class="muted small" id="req-note">
+       * Pflichtfelder
+      </p>
+     </form>
+    </div>
+    <!-- Rechte Spalte: Warenkorb / Summen / Zahlung -->
+    <div class="panel">
+     <div class="inline" style="justify-content:space-between;align-items:center;margin-bottom:6px">
+      <h2 style="margin:0">
+       Dein Warenkorb
+      </h2>
+      <a class="btn small" href="index.html#offers">
+       ← Zurück zum Shop
+      </a>
+     </div>
+     <div class="row-1">
+      <table class="cart-table" id="cartTable">
+       <thead>
+        <tr class="muted">
+         <th align="left">
+          Artikel
+         </th>
+         <th>
+          Menge
+         </th>
+         <th class="line-right">
+          Preis
+         </th>
+        </tr>
+       </thead>
+       <tbody id="cartBody">
+        <tr>
+         <td class="muted" colspan="3">
+          Wird geladen…
+         </td>
+        </tr>
+       </tbody>
+      </table>
+      <div class="hr">
+      </div>
+      <div class="totals" id="totalsBox">
+       <div class="rowline" id="rowKU" style="display:none;">
+        <span class="muted small">
+         * Keine USt aufgrund der Kleinunternehmerregelung
+        </span>
+        <span>
+        </span>
+       </div>
+       <div class="rowline">
+        <span>
+         Zwischensumme
+        </span>
+        <strong id="sumSub">
+         €0,00
+        </strong>
+       </div>
+       <div class="rowline">
+        <span>
+         Versand
+         <span class="muted" id="shipEta">
+         </span>
+        </span>
+        <strong id="sumShip">
+         €0,00
+        </strong>
+       </div>
+       <!-- ersetzt -->
+       <div class="rowline" id="rowVat">
+        <span>
+         davon USt gesamt
+        </span>
+        <strong id="sumVat">
+         €0,00
+        </strong>
+       </div>
+       <div class="rowline grand">
+        <span>
+         Gesamt
+        </span>
+        <strong id="sumGrand">
+         €0,00
+        </strong>
+       </div>
+       <div class="muted pm-note">
+        Alle Preise in EUR. Belege/Rechnungen werden per E-Mail versendet.
+       </div>
+      </div>
+      <div class="hr">
+      </div>
+      <!-- Stripe: 1) Button erzeugt Session & öffnet Payment -->
+      <button class="btn primary block" id="payBtn">
+       Jetzt bezahlen
+      </button>
+      <!-- Stripe: 2) Payment Element (wird gezeigt, wenn clientSecret geliefert wird) -->
+      <div class="panel" id="payment-area" style="margin-top:12px;">
+       <h3 style="margin:0 0 8px;">
+        Zahlungsmethode
+       </h3>
+       <div id="payment-element">
+       </div>
+       <div class="inline" style="margin-top:10px; justify-content:space-between;">
+        <button class="btn primary" id="confirmPayment">
+         Zahlung abschließen
+        </button>
+        <span class="muted" id="payStatus">
+        </span>
+       </div>
+      </div>
+      <p class="muted small" style="margin-top:10px;">
+       Unterstützte Methoden (sofern in Stripe freigeschaltet): Karte, Apple Pay/Google Pay, Klarna, iDEAL, Bancontact, Sofort, PayPal*.
+       <br/>
+       <small>
+        *PayPal über Stripe nur in bestimmten Regionen/Konten.
+       </small>
+      </p>
+     </div>
+    </div>
+   </section>
+  </main>
+  <!-- THEME: vollständige Übernahme + Live-Update -->
+  <script>
+   (function(){
+      const KEY_CONF = 'builder_conf_v3';
+
+      function autoInk(hex) {
+        const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(String(hex||'').trim());
+        if(!m) return '#08242c';
+        const r = parseInt(m[1],16), g = parseInt(m[2],16), b = parseInt(m[3],16);
+        const l = (0.2126*r + 0.7152*g + 0.0722*b) / 255;
+        return l > 0.6 ? '#08242c' : '#ffffff';
+      }
+      const setVar = (k,v)=> v!=null && document.documentElement.style.setProperty(k, v);
+
+      function applyTheme(){
+        let conf = {};
+        try { conf = JSON.parse(localStorage.getItem(KEY_CONF) || '{}'); } catch {}
+        setVar('--text',  conf.textColor);
+        setVar('--bg1',   conf.bgColor);
+        setVar('--ff',    conf.fontFamily);
+
+        const textNow = getComputedStyle(document.documentElement)
+          .getPropertyValue('--text').trim() || conf.textColor || '#ecf0ff';
+        setVar('--subtitle', `color-mix(in oklab, ${textNow} 10%, white)`);
+        setVar('--muted', 'var(--subtitle)');
+
+        const a = Number(conf.strokeAlpha ?? 0.14);
+        setVar('--stroke', `rgba(255,255,255,${a})`);
+        setVar('--glass',  `rgba(255,255,255,${Math.max(0, Math.min(0.8, a*0.42))})`);
+
+        if (conf.brand) {
+          setVar('--brand', conf.brand);
+          setVar('--brand-ink', conf.brandInk || autoInk(conf.brand));
+        }
+
+        document.querySelector('meta[name="theme-color"]')
+          ?.setAttribute('content', conf.bgColor || '#0a0b0f');
+
+        document.body.style.backgroundColor =
+          getComputedStyle(document.documentElement).getPropertyValue('--bg1') ||
+          conf.bgColor || '#0a0b0f';
+      }
+
+      // initial
+      applyTheme();
+
+      // Live via BroadcastChannel
+      let bc = null; try { bc = new BroadcastChannel('od_sync'); } catch {}
+      bc?.addEventListener('message', (ev) => {
+        if((ev.data || {}).type === 'theme') applyTheme();
+      });
+
+      // Fallback über storage
+      window.addEventListener('storage', (e)=>{
+        if(e.key === KEY_CONF) applyTheme();
+      });
+    })();
+  </script>
+  <!-- Checkout Logik (unverändert) -->
+  <script>
+   /* ===== Mini Geld-Utils ===== */
+    const EUR = new Intl.NumberFormat('de-AT',{style:'currency',currency:'EUR'});
+    const parseEUR = s => {
+      if(!s) return 0;
+      const n = String(s).replace(/[^\d,.-]/g,'').replace(/\./g,'').replace(',', '.');
+      const v = parseFloat(n);
+      return isNaN(v)?0:v;
+    };
+
+    /* ===== Warenkorb laden + live sync ===== */
+    let items = [];
+    const CART_KEY = 'od_cart';
+
+// === VAT Map (productId -> vat%) live lesen ==========================
+const VAT_KEY = 'od_vat_by_id';
+function getVatMap(){
+  try { return JSON.parse(localStorage.getItem(VAT_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+// VAT-Lookup: erst Map per ID, sonst Fallback über Produkte (Name/ID)
+function getVatPctForItem(it){
+  const map = getVatMap();
+  if (map && map[it.id] != null) return +map[it.id] || 0;
+
+  // Fallback: Produktliste lesen und per ID oder Name matchen
+  try {
+    const prods = JSON.parse(localStorage.getItem('shop_products_v1') || '[]');
+    const p = prods.find(p => p.id === it.id)
+          || prods.find(p => (p.name||'').trim() === (it.title||'').trim());
+    return Number.isFinite(+p?.vat) ? +p.vat : Number(it.vat || 0);
+  } catch {
+    return Number(it.vat || 0);
+  }
+}
+
+
+function loadCart(){
+  try{ items = JSON.parse(localStorage.getItem(CART_KEY) || '[]'); }
+  catch{ items = []; }
+  if(!Array.isArray(items)) items = [];
+
+  // Migration: falls ältere Cart-Items eine andere ID hatten → per Name auf neue ID mappen
+  try {
+    const prods = JSON.parse(localStorage.getItem('shop_products_v1') || '[]');
+    const nameToId = Object.fromEntries(prods.map(p => [String(p.name||'').trim(), p.id]));
+    items = items.map(x => {
+      const fixedId = nameToId[String(x.title||'').trim()];
+      return fixedId ? { ...x, id: fixedId } : x;
+    });
+  } catch {}
+}
+
+
+    function saveCart(){
+      localStorage.setItem(CART_KEY, JSON.stringify(items));
+      renderCart();
+    }
+window.addEventListener('storage', (e)=>{
+  if (e.key === CART_KEY){
+    loadCart(); renderCart();
+  }
+  if (e.key === 'od_vat_by_id' || e.key === 'shop_products_v1'){
+    renderCart(); // VAT/Produkte aktualisiert
+  }
+});
+
+
+    // Live-Updates vom Builder (Cart/VAT Änderungen)
+let bc = null; try { bc = new BroadcastChannel('od_sync'); } catch {}
+bc?.addEventListener('message', (ev) => {
+  const t = (ev.data || {}).type;
+  if (t === 'cart' || t === 'VAT_UPDATE') {
+    loadCart();
+    renderCart();
+  }
+});
+
+/* ===== Versand / Steuer konfigurieren ===== */
+const VAT_RATE = 0.20; // 20% (AT)
+function fmt(n){ return EUR.format(Math.round(n*100)/100); }
+
+// ---- Builder-Shipping: Konfig aus LocalStorage laden ----
+const KEY_SHIP = 'od_shipping_v1';
+const shipDefaults = {
+  zones: {
+    AT:  { on: true,  price: 4.90,  eta: '2–3 Werktage' },
+    DE:  { on: true,  price: 7.90,  eta: '2–4 Werktage' },
+    EU:  { on: true,  price: 9.90,  eta: '3–5 Werktage' },
+    INT: { on: false, price: 19.90, eta: '3–7 Werktage' }
+  },
+  free: { on: true, threshold: 89 }
+};
+function getShipConf(){
+  try { return Object.assign({}, shipDefaults, JSON.parse(localStorage.getItem(KEY_SHIP)||'{}')); }
+  catch { return shipDefaults; }
+}
+
+// --- Weltweite Ländererkennung ---
+const ISO2 = ["AF","AX","AL","DZ","AS","AD","AO","AI","AQ","AG","AR","AM","AW","AU","AT","AZ","BS","BH","BD","BB","BY","BE","BZ","BJ","BM","BT","BO","BQ","BA","BW","BV","BR","IO","BN","BG","BF","BI","KH","CM","CA","CV","KY","CF","TD","CL","CN","CX","CC","CO","KM","CG","CD","CK","CR","CI","HR","CU","CW","CY","CZ","DK","DJ","DM","DO","EC","EG","SV","GQ","ER","EE","SZ","ET","EU","FK","FO","FJ","FI","FR","GF","PF","TF","GA","GM","GE","DE","GH","GI","GR","GL","GD","GP","GU","GT","GG","GN","GW","GY","HT","HM","VA","HN","HK","HU","IS","IN","ID","IR","IQ","IE","IM","IL","IT","JM","JP","JE","JO","KZ","KE","KI","KP","KR","KW","KG","LA","LV","LB","LS","LR","LY","LI","LT","LU","MO","MG","MW","MY","MV","ML","MT","MH","MQ","MR","MU","YT","MX","FM","MD","MC","MN","ME","MS","MA","MZ","MM","NA","NR","NP","NL","NC","NZ","NI","NE","NG","NU","NF","MK","MP","NO","OM","PK","PW","PS","PA","PG","PY","PE","PH","PN","PL","PT","PR","QA","RE","RO","RU","RW","BL","SH","KN","LC","MF","PM","VC","WS","SM","ST","SA","SN","RS","SC","SL","SG","SX","SK","SI","SB","SO","ZA","GS","SS","ES","LK","SD","SR","SJ","SE","CH","SY","TW","TJ","TZ","TH","TL","TG","TK","TO","TT","TN","TR","TM","TC","TV","UG","UA","AE","GB","US","UM","UY","UZ","VU","VE","VN","VG","VI","WF","EH","YE","ZM","ZW"];
+const EU = new Set(["AT","BE","BG","HR","CY","CZ","DK","EE","FI","FR","DE","GR","HU","IE","IT","LV","LT","LU","MT","NL","PL","PT","RO","SK","SI","ES","SE"]);
+const ALIASES = {
+  "grossbritannien":"GB","großbritannien":"GB","great britain":"GB","vereinigtes königreich":"GB","united kingdom":"GB","uk":"GB","england":"GB",
+  "schweiz":"CH","switzerland":"CH","suisse":"CH","svizzera":"CH",
+  "usa":"US","vereinigte staaten":"US","united states":"US","united states of america":"US","amerika":"US",
+  "niederlande":"NL","holland":"NL",
+  "vereinigte arabische emirate":"AE","uae":"AE","emirate":"AE",
+  "kongo":"CD","demokratische republik kongo":"CD","drc":"CD","congo-kinshasa":"CD",
+  "kongo republik":"CG","congo":"CG","congo-brazzaville":"CG",
+  "elfenbeinküste":"CI","côte d’ivoire":"CI","cote d’ivoire":"CI","ivory coast":"CI",
+  "türkei":"TR","turkei":"TR","turkey":"TR",
+  "vatikan":"VA","holy see":"VA",
+  "palästina":"PS","palastina":"PS","palestine":"PS",
+  "macedonia":"MK","north macedonia":"MK","nordmazedonien":"MK",
+  "russland":"RU","russia":"RU",
+  "südkorea":"KR","suedkorea":"KR","south korea":"KR",
+  "nordkorea":"KP","north korea":"KP",
+  "myanmar":"MM","burma":"MM",
+  "kapverden":"CV","cabo verde":"CV",
+};
+const dnDE = new Intl.DisplayNames(['de'], { type:'region' });
+const dnEN = new Intl.DisplayNames(['en'], { type:'region' });
+function normalize(s){
+  return String(s||'').toLocaleLowerCase('de')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9\s\-']/g,' ').replace(/\s+/g,' ').trim();
+}
+const nameToIso = new Map();
+ISO2.forEach(code=>{
+  const de = normalize(dnDE.of(code)||'');
+  const en = normalize(dnEN.of(code)||'');
+  if(de) nameToIso.set(de, code);
+  if(en) nameToIso.set(en, code);
+});
+Object.entries(ALIASES).forEach(([k,v])=> nameToIso.set(normalize(k), v));
+
+function findIsoFromInput(input){
+  const q = normalize(input);
+  if(!q) return null;
+  if(nameToIso.has(q)) return nameToIso.get(q);
+  for(const [name, code] of nameToIso.entries()){
+    if(q===name) return code;
+    if((q.includes(name) || name.includes(q)) && (name.length>=4 || q.length>=4)) return code;
+  }
+  for(const [name, code] of nameToIso.entries()){
+    if(name.startsWith(q) && q.length>=4) return code;
+  }
+  return null;
+}
+
+
+// nutzt deine bestehenden Hilfen (EU-Set, findIsoFromInput, …)
+function zoneFromIso(iso){
+  if (iso === 'AT') return 'AT';
+  if (iso === 'DE') return 'DE';
+  if (EU.has(iso))  return 'EU';
+  return 'INT';
+}
+
+function getZoneAndPrice(iso, subtotal){
+  const conf = getShipConf();
+  const zKey = zoneFromIso(iso);
+  const z    = conf.zones[zKey] || { on:false, price:0, eta:'' };
+
+  if (!z.on){
+    // Zone im Builder deaktiviert → kein Versand
+    return { allowed:false, zone:zKey, price:0, eta:'', free:false, threshold:conf.free?.threshold || 0 };
+  }
+
+  let price = z.price || 0;
+  const freeActive = !!conf.free?.on;
+  const threshold  = Number(conf.free?.threshold || 0);
+  const free = freeActive && (subtotal >= threshold);
+
+  if (free) price = 0;
+
+  return { allowed:true, zone:zKey, price, eta:(z.eta || ''), free, threshold };
+}
+
+// --- UI-Ship-Status + Live-Refresh aus dem Builder ---
+const shipState = { cost: 0, label:'Standard', eta:'', allowed:true, note:'' };
+
+try {
+  let bc = new BroadcastChannel('od_sync');
+  bc.addEventListener('message', (ev) => {
+    if ((ev.data||{}).type === 'shipping') {
+      // Gratis-Hinweis im Text aktualisieren
+      const conf = getShipConf();
+      const n = document.getElementById('freeNote');
+      if (n) n.innerHTML = EUR.format(conf.free?.threshold || 0).replace(' €','&nbsp;€');
+      // neu berechnen
+      recalcShipping();
+    }
+  });
+} catch {}
+
+
+    /* ===== Cart rendern ===== */
+    const cartBody = document.getElementById('cartBody');
+    const sumSub   = document.getElementById('sumSub');
+    const sumShip  = document.getElementById('sumShip');
+    const sumVat   = document.getElementById('sumVat');
+    const sumGrand = document.getElementById('sumGrand');
+    const shipEta  = document.getElementById('shipEta');
+    const vatRateLabel = document.getElementById('vatRateLabel');
+
+    const shipPriceLabel = document.getElementById('shipPriceLabel');
+const billCountryEl  = document.getElementById('billCountry');
+const shipCountryEl  = document.getElementById('shipCountry');
+const shipSameEl     = document.getElementById('shipSame');
+
+function activeCountryInput(){
+  return shipSameEl.checked ? billCountryEl : shipCountryEl;
+}
+
+function recalcShipping(){
+  const sub = calcSubtotal();
+  const methodPickup = document.querySelector('input[name="shipMethod"][value="pickup"]')?.checked;
+
+  if(methodPickup){
+    shipState.cost = 0; shipState.label='Abholung'; shipState.eta='heute/morgen';
+    if(shipPriceLabel) shipPriceLabel.textContent = '€0,00';
+    renderCart();
+    return;
+  }
+
+  const field = activeCountryInput();
+  const iso = findIsoFromInput(field?.value || '');
+  if(!iso){
+    // invalid, aber erst beim Pay blockieren – Anzeige neutral
+    shipState.cost = 0; shipState.label='Standard'; shipState.eta='';
+    if(shipPriceLabel) shipPriceLabel.textContent = '—';
+    renderCart();
+    return;
+  }
+
+
+ const calc = getZoneAndPrice(iso, sub);
+shipState.allowed = !!calc.allowed;
+shipState.cost    = calc.price;
+shipState.label   = 'Standard';
+shipState.eta     = calc.allowed ? (calc.free ? 'Gratisversand' : (calc.eta || '')) : '';
+shipState.note    = calc.allowed ? '' : 'Kein Versand in dieses Land';
+if (shipPriceLabel) shipPriceLabel.textContent = calc.allowed ? fmt(calc.price) : '—';
+
+  renderCart();
+}
+
+// Änderungen live beobachten
+billCountryEl?.addEventListener('input', recalcShipping);
+shipCountryEl?.addEventListener('input', recalcShipping);
+document.getElementById('shipMethods')?.addEventListener('change', recalcShipping);
+
+// Lieferadresse-Toggle: Sterne/required anpassen + neu berechnen
+shipSameEl.addEventListener('change', () => {
+  const shipBox = document.getElementById('shipBox');
+  const useSame = shipSameEl.checked;
+  shipBox.style.display = useSame ? 'none' : '';
+  document.querySelectorAll('.ship-req').forEach(el => el.style.display = useSame ? 'none' : 'inline');
+  ['shipStreet','shipZip','shipCity','shipCountry'].forEach(n => {
+    const el = document.querySelector(`[name="${n}"]`);
+    el?.toggleAttribute('required', !useSame);
+    if(useSame){ el?.setCustomValidity(''); el?.classList.remove('invalid-glow'); }
+  });
+  recalcShipping();
+});
+
+
+    function calcSubtotal(){ return items.reduce((s,x)=> s + Number(x.price||0) * Number(x.qty||1), 0); }
+
+    function renderCart(){
+
+  // ⬅️ MUSS ganz oben stehen, weil es im items.map() gebraucht wird
+  const vatMapTotals = getVatMap();
+  const allZero = items.length > 0 && items.every(x => {
+    const pct = Number.isFinite(+vatMapTotals[x.id]) ? +vatMapTotals[x.id] : Number(x.vat || 0);
+    return (pct || 0) === 0;
+  });
+
+
+      if(!items.length){
+        cartBody.innerHTML = '<tr><td colspan="3" class="muted">Dein Warenkorb ist leer.</td></tr>';
+  }else{
+  cartBody.innerHTML = items.map((x,i)=>{
+const qty      = Number(x.qty || 1);
+const pGross   = Number(x.price || 0);   // Einzelpreis BRUTTO
+
+const pct = getVatPctForItem(x);
+
+const lineGross= pGross * qty;           // Zeilensumme BRUTTO
+const lineVat  = pct > 0 ? (lineGross - (lineGross / (1 + pct/100))) : 0;
+
+    return `
+      <tr data-i="${i}">
+        <td>
+          <div style="display:flex; align-items:center; gap:10px;">
+            ${x.img ? `<img src="${x.img}" alt="" style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,.1)">` : ''}
+            <div>
+              <div><strong>${x.title || 'Artikel'}</strong></div>
+              ${x.variant ? `<div class="muted small">${x.variant}</div>` : ''}
+            </div>
+          </div>
+        </td>
+        <td>
+          <div class="qtyctl">
+            <button type="button" class="q-dec">−</button>
+            <input value="${qty}" inputmode="numeric" pattern="[0-9]*">
+            <button type="button" class="q-inc">+</button>
+          </div>
+        </td>
+        <td class="line-right">
+          <div>${fmt(lineGross)}</div>
+   <div class="muted small">
+  davon USt ${pct.toLocaleString('de-AT')}%: ${fmt(lineVat)}${(allZero && pct === 0) ? ' <sup>*</sup>' : ''}
+</div>
+
+
+          <button type="button" class="btn small" style="margin-top:6px" data-act="rm">Entfernen</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+
+// Summen NEU: immer live aus Subtotal + Land berechnen
+const sub = calcSubtotal();
+
+// Methode „Abholung“?
+const isPickup = document.querySelector('input[name="shipMethod"][value="pickup"]')?.checked;
+
+// aktives Land (Rechnungsland oder Lieferland, je nach Checkbox)
+const activeField = activeCountryInput();
+const iso = findIsoFromInput(activeField?.value || '');
+
+// Versand neu bestimmen
+let price = 0, eta = '';
+if (isPickup) {
+  price = 0; eta = 'heute/morgen';
+} else if (iso) {
+  const calc = getZoneAndPrice(iso, sub); // berücksichtigt Gratisversand ab 49 €
+  price = calc.price; eta = calc.eta;
+} else {
+  // Land noch ungültig → Kosten neutral anzeigen, Pay blockt später
+  price = 0; eta = '';
+}
+
+// State & UI updaten
+shipState.cost = price;
+shipState.label = isPickup ? 'Abholung' : 'Standard';
+shipState.eta = eta;
+
+if (shipPriceLabel) {
+  shipPriceLabel.textContent = isPickup ? '€0,00' : (iso ? fmt(price) : '—');
+}
+
+// USt gesamt (aus Brutto herausgerechnet)
+const vat = items.reduce((sum, x) => {
+  const qty       = Number(x.qty || 1);
+  const pGross    = Number(x.price || 0);
+  const pct       = getVatPctForItem(x);
+  const lineGross = pGross * qty;
+  const lineVat   = pct > 0 ? (lineGross - (lineGross / (1 + pct/100))) : 0;
+  return sum + lineVat;
+}, 0);
+
+// Gesamtsumme
+const ship = price;
+const grand = sub + ship;
+
+sumSub.textContent   = fmt(sub);
+sumShip.textContent  = fmt(ship);
+sumVat.textContent   = fmt(vat);
+sumGrand.textContent = fmt(grand);
+shipEta.textContent  = shipState.eta ? `(${shipState.eta})` : '';
+
+// Hinweis, falls Zone deaktiviert
+if (!shipState.allowed) {
+  sumShip.textContent = '—';
+  shipEta.textContent = '(Kein Versand in dieses Land)';
+}
+
+
+const rowKU  = document.getElementById('rowKU');
+const rowVat = document.getElementById('rowVat');
+
+if (rowKU)  rowKU.style.display  = allZero ? ''  : 'none';
+if (rowVat) rowVat.style.display = allZero ? 'none' : '';
+
+const grandLabelEl = document.querySelector('.totals .grand span');
+if (grandLabelEl){
+  grandLabelEl.innerHTML = 'Gesamt';
+}
+
+
+      // Qty Events
+      cartBody.querySelectorAll('tr').forEach(tr=>{
+        const i = Number(tr.dataset.i);
+        tr.querySelector('.q-dec')?.addEventListener('click', ()=>{
+          items[i].qty = Math.max(1, Number(items[i].qty||1) - 1);
+          saveCart();
+        });
+        tr.querySelector('.q-inc')?.addEventListener('click', ()=>{
+          items[i].qty = Number(items[i].qty||1) + 1;
+          saveCart();
+        });
+        tr.querySelector('input')?.addEventListener('input', (e)=>{
+          const v = Math.max(1, parseInt(e.target.value||'1',10) || 1);
+          items[i].qty = v; saveCart();
+        });
+        tr.querySelector('[data-act="rm"]')?.addEventListener('click', ()=>{
+          items.splice(i,1); saveCart();
+        });
+      });
+    }
+
+    /* ===== Versandmethoden wählen ===== */
+document.getElementById('shipMethods')?.addEventListener('change', recalcShipping);
+
+
+// Pflichtstatus für Lieferadresse setzen/entfernen
+function setShippingRequired(req){
+  const names = ['shipStreet','shipZip','shipCity','shipCountry'];
+  names.forEach(n => {
+    const el = document.querySelector(`[name="${n}"]`);
+    if(!el) return;
+    el.toggleAttribute('required', !!req);
+    if(!req){
+      // evtl. alte Fehlerzustände entfernen
+      el.setCustomValidity('');
+      el.classList.remove('invalid-glow');
+    }
+  });
+}
+
+// Sterne neben Lieferfeldern zeigen/verstecken
+function updateShippingStars(useSame){
+  document.querySelectorAll('.ship-req').forEach(el => {
+    el.style.display = useSame ? 'none' : 'inline';
+  });
+}
+
+
+/* ===== Lieferadresse Toggle ===== */
+const shipSame = document.getElementById('shipSame');
+const shipBox  = document.getElementById('shipBox');
+
+shipSame.addEventListener('change', ()=> {
+  const useSame = shipSame.checked;
+  shipBox.style.display = useSame ? 'none' : '';
+
+  // ⭐ Sterne & required-Status passend umschalten
+  updateShippingStars(useSame);
+  setShippingRequired(!useSame);
+});
+
+
+    /* ===== Start ===== */
+    loadCart(); renderCart();
+
+    /* ===== Stripe Zahlung ===== */
+    const payBtn = document.getElementById('payBtn');
+    const paymentArea = document.getElementById('payment-area');
+    const paymentElementBox = document.getElementById('payment-element');
+    const confirmPaymentBtn = document.getElementById('confirmPayment');
+    const payStatus = document.getElementById('payStatus');
+
+    // Stripe init (Payment Element Weg)
+    const stripe = Stripe('YOUR_PUBLISHABLE_KEY');
+    let elements = null;
+    let clientSecret = null;
+
+    function collectPayload(){
+      const f = document.getElementById('co-form');
+      const fd = new FormData(f);
+      const billing = {
+        firstName: fd.get('firstName')||'',
+        lastName:  fd.get('lastName')||'',
+        email:     fd.get('email')||'',
+        phone:     fd.get('phone')||'',
+        company:   fd.get('company')||'',
+        vatId:     fd.get('vatId')||'',
+        address: {
+          line1:  fd.get('billStreet')||'',
+          line2:  fd.get('billLine2')||'',
+          postal_code: fd.get('billZip')||'',
+          city:   fd.get('billCity')||'',
+          country: findIsoFromInput(fd.get('billCountry')) || ''
+        }
+      };
+      const shippingSame = document.getElementById('shipSame').checked;
+      const shipping = shippingSame ? {...billing} : {
+        name: `${fd.get('firstName')||''} ${fd.get('lastName')||''}`.trim(),
+        phone: fd.get('phone')||'',
+        address: {
+          line1:  fd.get('shipStreet')||'',
+          line2:  fd.get('shipLine2')||'',
+          postal_code: fd.get('shipZip')||'',
+          city:   fd.get('shipCity')||'',
+          country: findIsoFromInput(fd.get('shipCountry')) || ''
+        }
+      };
+      const meta = {
+        note: fd.get('note')||'',
+        shipMethod: shipState.label,
+        shipEta: shipState.eta
+      };
+      return { billing, shipping, items, meta };
+    }
+
+    async function createSession(){
+      // Server erstellt EITHER PaymentIntent (→ clientSecret) OR Checkout Session (→ sessionId)
+      const payload = collectPayload();
+      // brutto Summen mitgeben (optional – Server MUSS eigene Preise prüfen!)
+      payload.totals = {
+        subtotal: calcSubtotal(),
+        shipping: Number(shipState.cost||0),
+        vatRate: VAT_RATE
+      };
+
+      const res = await fetch('/api/create-checkout-session', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      if(!res.ok) throw new Error('Fehler beim Erstellen der Zahlungs-Session');
+      return res.json();
+    }
+
+function validateCountriesBeforePay(){
+  const form = document.getElementById('co-form');
+  if(!form.checkValidity()) return false;
+
+  const active = activeCountryInput();
+  const iso = findIsoFromInput(active.value);
+  if(!iso){
+    active.setCustomValidity('Bitte ein gültiges Land eingeben (z. B. Österreich, Deutschland, Schweiz, Ghana, USA …).');
+    form.reportValidity();
+    active.scrollIntoView({behavior:'smooth', block:'center'});
+    active.focus({preventScroll:true});
+    const glow = active.closest('.field') || active;
+    glow.classList.add('invalid-glow');
+    setTimeout(()=> glow.classList.remove('invalid-glow'), 1200);
+    return false;
+  }
+
+
+  // Wenn Zone im Builder deaktiviert → blocken
+  const sub = calcSubtotal();
+  const calc = getZoneAndPrice(iso, sub);
+  if (!calc.allowed){
+    active.setCustomValidity('Für dieses Land ist kein Versand verfügbar.');
+    const form = document.getElementById('co-form');
+    form.reportValidity();
+    const glow = active.closest('.field') || active;
+    glow.classList.add('invalid-glow');
+    setTimeout(()=> glow.classList.remove('invalid-glow'), 1200);
+    return false;
+  }
+
+
+  active.setCustomValidity('');
+  return true;
+}
+
+
+payBtn.addEventListener('click', async ()=>{
+  const form = document.getElementById('co-form');
+
+  // 1) Vor dem Start: Vollständigkeit + Ländererkennung prüfen
+  if (
+    !validateCountriesBeforePay() ||
+    !document.getElementById('agreeTerms').checked ||
+    !document.getElementById('agreePrivacy').checked
+  ) {
+    // Browser-Validierungsblasen zeigen
+    form.reportValidity();
+
+    // Zum ersten ungültigen Feld scrollen & fokussieren
+    const firstInvalid = form.querySelector(':invalid');
+    if (firstInvalid) {
+      firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstInvalid.focus({ preventScroll: true });
+
+      // kurzer Glow zur Hervorhebung (CSS-Klasse s. unten)
+      const glowBox = firstInvalid.closest('.field') || firstInvalid;
+      glowBox.classList.add('invalid-glow');
+      setTimeout(() => glowBox.classList.remove('invalid-glow'), 1200);
+    }
+    // Zahlung NICHT starten
+    return;
+  }
+
+  // 2) Alles ok → Stripe-Flow starten (dein bestehender Code)
+  try{
+    payBtn.disabled = true;
+    payBtn.textContent = 'Wird vorbereitet…';
+
+    const session = await createSession();
+
+    // a) Payment Element (clientSecret) → wir bleiben auf Seite
+    if(session.clientSecret){
+      clientSecret = session.clientSecret;
+      if(!elements){
+        elements = stripe.elements({ clientSecret, appearance:{
+          theme: 'night', labels: 'floating'
+        }});
+      }
+      const paymentElement = elements.create('payment', {
+        layout: 'tabs'
+      });
+      paymentElement.mount(paymentElementBox);
+      paymentArea.classList.add('active');
+      payStatus.textContent = 'Bitte Zahlungsmethode wählen.';
+      payBtn.style.display = 'none';
+      return;
+    }
+
+    // b) Stripe Checkout Redirect
+    if(session.sessionId){
+      const { error } = await stripe.redirectToCheckout({ sessionId: session.sessionId });
+      if(error){ alert(error.message || 'Stripe Fehler'); }
+      return;
+    }
+
+    throw new Error('Server hat weder clientSecret noch sessionId geliefert.');
+
+  }catch(err){
+    console.error(err);
+    alert(err.message || 'Konnte Zahlung nicht starten.');
+  }finally{
+    payBtn.disabled = false;
+    payBtn.textContent = 'Jetzt bezahlen';
+  }
+});
+
+
+    confirmPaymentBtn.addEventListener('click', async ()=>{
+      if(!clientSecret || !elements){ return; }
+      confirmPaymentBtn.disabled = true;
+      payStatus.textContent = 'Zahlung wird verarbeitet…';
+
+      const payload = collectPayload();
+      const {error} = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          // Hier deine Erfolgsseite:
+          return_url: window.location.origin + '/success.html',
+          receipt_email: payload.billing.email || undefined
+        }
+      });
+
+      if(error){
+        payStatus.textContent = '';
+        alert(error.message || 'Zahlung fehlgeschlagen.');
+        confirmPaymentBtn.disabled = false;
+      }else{
+        // Stripe leitet i. d. R. weiter – falls nicht:
+        payStatus.textContent = 'Zahlung gesendet.';
+      }
+    });
+
+    // Initial: falls Seite aus „Warenkorb ansehen“ kam
+ document.addEventListener('DOMContentLoaded', ()=> {
+  // Lieferadresse-Box Status
+  const shipSameEl = document.getElementById('shipSame');
+  const shipBox = document.getElementById('shipBox');
+  const useSame = shipSameEl.checked;
+
+  shipBox.style.display = useSame ? 'none' : '';
+
+  // ⭐ beim Laden direkt korrekt setzen
+  updateShippingStars(useSame);
+  setShippingRequired(!useSame);
+
+  const conf0 = getShipConf();
+const n0 = document.getElementById('freeNote');
+if (n0) n0.innerHTML = EUR.format(conf0.free?.threshold || 0).replace(' €','&nbsp;€');
+
+recalcShipping();
+
+});
+  </script>
+  <!-- Legal Modal (Checkout) -->
+  <div aria-hidden="true" class="qr-modal" id="legal-modal">
+   <div aria-labelledby="legal-title" aria-modal="true" class="qr-dialog legal-dialog" role="dialog">
+    <h2 id="legal-title">
+     Rechtliches
+    </h2>
+    <div class="legal-body" id="legal-body">
+     <!-- Inhalt via JS -->
+    </div>
+    <div class="qr-actions legal-actions">
+     <button class="btn small" id="legal-close" type="button">
+      Schließen
+     </button>
+    </div>
+   </div>
+  </div>
+  <script>
+   /* ===== LEGAL MODAL (Checkout) ===== */
+  (() => {
+    const modal   = document.getElementById('legal-modal');
+    const titleEl = document.getElementById('legal-title');
+    const bodyEl  = document.getElementById('legal-body');
+    const closeEl = document.getElementById('legal-close');
+
+    const legalTexts = {
+      terms: `
+        <h3>Allgemeine Geschäftsbedingungen (AGB)</h3>
+        <p>… deine AGB …</p>
+      `,
+      revocation: `
+        <h3>Widerrufsbelehrung</h3>
+        <p>… deine Widerrufsinfo …</p>
+      `,
+      privacy: `
+        <h3>Datenschutzerklärung</h3>
+        <p>… deine DSGVO-Erklärung …</p>
+      `
+    };
+
+    function openLegal(kind){
+      const titles = {
+        terms:'AGB',
+        revocation:'Widerrufsbelehrung',
+        privacy:'Datenschutzerklärung'
+      };
+      titleEl.textContent = titles[kind] || 'Rechtliches';
+      bodyEl.innerHTML = legalTexts[kind] || '<p>Kein Inhalt hinterlegt.</p>';
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden','false');
+      closeEl?.focus();
+    }
+
+    function closeLegal(){
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden','true');
+    }
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.legal-open');
+      if (!btn) return;
+      e.preventDefault();
+      openLegal(btn.dataset.legal);
+    });
+
+    closeEl?.addEventListener('click', closeLegal);
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeLegal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('open')) closeLegal();
+    });
+  })();
+  </script>
+ </body>
+</html>
