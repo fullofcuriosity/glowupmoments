@@ -1,3 +1,4 @@
+(async function(){
 // GLOBAL geteilter BroadcastChannel (für alle IIFEs)
 window.bc = window.bc || (('BroadcastChannel' in window) ? new BroadcastChannel('od_sync') : null);
 
@@ -78,6 +79,23 @@ async function serverGetState(){
   }
 }
 
+async function serverHydrateLocalStorage(){
+  // Holt den globalen Zustand vom Server (Supabase über /api/state-get)
+  // und schreibt ihn in localStorage, bevor die Seite rendert.
+  const state = await serverGetState();
+  const ls = state && state.ls;
+  if (!ls || typeof ls !== 'object') return;
+
+  try{
+    Object.entries(ls).forEach(([k,v])=>{
+      if (typeof k !== 'string') return;
+      if (v == null) return;
+      const next = String(v);
+      if (localStorage.getItem(k) !== next) localStorage.setItem(k, next);
+    });
+  }catch{}
+}
+
 let __persistT = null;
 function serverSaveState(partial){
   if (!USE_SERVER_STATE) return;
@@ -92,6 +110,15 @@ function serverSaveState(partial){
     }catch{}
   }, 200);
 }
+
+// Wichtig: Server-Zustand zuerst in localStorage laden (damit Mobile/andere PCs den gleichen Stand sehen)
+(async () => {
+  try {
+    await serverHydrateLocalStorage();
+  } catch (e) {
+    // optional: console.warn("hydrate failed", e);
+  }
+})();
 
 
   // Live-Sync
@@ -131,7 +158,23 @@ function serverSaveState(partial){
   slogan2: 'Inspiriert von der Agora – dem zentralen Ort im antiken Griechenland.',
   fontFamily: defaultFont,
   logo: '',
-  brand: getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#86e8ff'
+  brand: getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#86e8ff',
+
+  // Kontakt-Symbole: nur sichtbar wenn im Builder angehakt
+  social: {
+    instagram:false,
+    linkedin:false,
+    facebook:false,
+    tiktok:false,
+    youtube:false,
+    x:false,
+    pinterest:false,
+    github:false,
+    whatsapp:false,
+    telegram:false,
+    email:false,
+    phone:false
+  }
   };
 
 
@@ -156,6 +199,36 @@ function serverSaveState(partial){
   /*if(mods.shop){ $('#offers details')?.setAttribute('open',''); }*/
   setHidden('#reviews', mods.reviews);
   setHidden('#services', mods.services);
+  
+  // ✅ Warenkorb nur sichtbar, wenn Shop aktiv ist
+  const fab = document.getElementById('cartFab');
+if (fab) {
+  fab.hidden = !mods.shop;
+  fab.style.display = mods.shop ? '' : 'none'; // 🔴 DAS FEHLT
+}
+
+  const drawer = document.getElementById('cartDrawer');
+  if (drawer && !mods.shop) 
+    drawer.hidden = true;
+}
+
+  function applySocialVisibility(){
+    const social = conf.social || {};
+
+    document.querySelectorAll('[data-social]').forEach(el => {
+      const key = (el.getAttribute('data-social') || '').toLowerCase();
+      const on  = !!social[key];
+      el.style.display = on ? '' : 'none';
+      el.setAttribute('aria-hidden', on ? 'false' : 'true');
+    });
+
+    Object.keys(social).forEach(key => {
+      const el = document.getElementById('social-' + key);
+      if (!el) return;
+      const on = !!social[key];
+      el.style.display = on ? '' : 'none';
+      el.setAttribute('aria-hidden', on ? 'false' : 'true');
+    });
   }
 
   function applyConf(){
@@ -185,6 +258,9 @@ function serverSaveState(partial){
 
   const desc = $('#bizDesc');
   if(desc){ desc.textContent = (conf.desc || '').slice(0,500); }
+
+  // Kontakt-Symbole anwenden
+  applySocialVisibility();
 
   // ✅ NEU: Company überall setzen (H1 + Footer + ggf. weitere Plätze)
   const company = (conf.company ?? 'Dotagora').trim();
@@ -691,16 +767,28 @@ function serverSaveState(partial){
 
 
   function syncAbout(){
-  const a=document.getElementById('edAboutTitle');
-  const d=document.getElementById('edAboutDesc');
+  const a = document.getElementById('edAboutTitle');
+  const d = document.getElementById('edAboutDesc');
   if(!a || !d) return;
 
-  clampEditable(a); clampEditable(d);
-  document.querySelector('#about .card-title') && (document.querySelector('#about .card-title').innerHTML = a.innerHTML || 'About us');
-  document.getElementById('bizDesc') && (document.getElementById('bizDesc').innerHTML = d.innerHTML || '');
-  conf.desc = (document.getElementById('bizDesc')?.textContent || '').slice(0,500);
+  clampEditable(a);
+  clampEditable(d);
+
+  // Ziel-Elemente im Layout
+  const aboutTitleEl = document.querySelector('#about .section-title');
+  const descEl = document.getElementById('bizDesc');
+
+  // Live in DOM schreiben
+  if (aboutTitleEl) aboutTitleEl.innerHTML = a.innerHTML || 'About us';
+  if (descEl) descEl.innerHTML = d.innerHTML || '';
+
+  // ✅ In conf speichern (Titel + Text)
+  conf.aboutTitle = (aboutTitleEl?.textContent || 'About us').slice(0,100);
+  conf.desc       = (descEl?.textContent || '').slice(0,500);
+
   saveConf();
-  }
+  applyConf();
+}
 
   // nur beim Blur „aufräumen“ (trim + mehrfach spaces) → stört Cursor NICHT
   function normalizeOnBlur(id, confKey, maxLen){
@@ -741,8 +829,12 @@ function serverSaveState(partial){
   edSlogan2?.addEventListener('input', syncSlogan2);
   edSlogan2?.addEventListener('blur',  () => normalizeOnBlur('edSlogan2','slogan2',200));
 
-  edAboutT
+  // About: live sync + sauberer blur
+  edAboutT?.addEventListener('input', syncAbout);
+  edAboutD?.addEventListener('input', syncAbout);
 
+  edAboutT?.addEventListener('blur', () => normalizeOnBlur('edAboutTitle','aboutTitle',100));
+  edAboutD?.addEventListener('blur', () => normalizeOnBlur('edAboutDesc','desc',500));
 
   /* ============ Avatar: setLogo (Kreis) ============ */
 function setLogo(url){
@@ -778,13 +870,37 @@ function setLogo(url){
   $$('.i-toggle').forEach(cb=>{
   cb.addEventListener('change', ()=>{
   const k = cb.dataset.name;
-  if(k==='shop'){ mods.shop = cb.checked; }
+  if(k==='shop'){ mods.shop = cb.checked; 
+if (k === 'shop' && !cb.checked) {
+  const fab = document.getElementById('cartFab');
+  if (fab) {
+    fab.hidden = true;
+    fab.style.display = 'none';
+  }
+}
+  }
   if(k==='services'){ mods.services = cb.checked; }
   if(k==='calendar'){ mods.booking = cb.checked; }
   localStorage.setItem(KEY_MODS, JSON.stringify(mods));
+  serverSaveState({ ls: { [KEY_MODS]: JSON.stringify(mods) } });
   applyMods();
+  try { typeof updateCartBadge === 'function' && updateCartBadge(); } catch {}
   });
   });
+
+  /* ============ Contact toggles -> social icons ============ */
+$$('.c-toggle').forEach(cb=>{
+  cb.addEventListener('change', ()=>{
+    const key = cb.dataset.key;          // z.B. "instagram"
+
+    if (!conf.social) conf.social = {};
+    conf.social[key] = cb.checked;       // ✅ true / false setzen
+
+    saveConf();                          // speichern (Server + LS)
+    applyConf();                         // sofort sichtbar
+  });
+});
+
 
   /* ============ Reviews (Index) ============ */
   function applyReviewsUI(){
@@ -1373,6 +1489,7 @@ copyBtn?.addEventListener('click', async () => {
     taken.add(slug);
     localStorage.setItem('od_taken_slugs', JSON.stringify([...taken]));
     localStorage.setItem('od_my_slug', slug);
+    serverSaveState({ ls: { ['od_my_slug']: slug } });
   }catch{}
 
   const url = `${ORIGIN.replace(/\/$/, '')}/${slug}`;
@@ -1389,6 +1506,7 @@ domainBtn?.addEventListener('click', async () => {
   try{
     // LIVE: await fetch('/api/profile', { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ domain }) });
     localStorage.setItem('od_my_domain', domain); // Fallback
+    serverSaveState({ ls: { ['od_my_domain']: domain } });
     if (statEl) { statEl.textContent = `Domain gespeichert: ${domain}`; statEl.style.color = 'var(--subtitle)'; }
 }catch{}
 });
@@ -1570,7 +1688,9 @@ function getVatMap(){
   catch { return {}; }
 }
 function saveVatMap(map){
-  localStorage.setItem(VAT_KEY, JSON.stringify(map || {}));
+  const v = JSON.stringify(map || {});
+  localStorage.setItem(VAT_KEY, v);
+  serverSaveState({ ls: { [VAT_KEY]: v } });
   try { bc && bc.postMessage({ type:'VAT_UPDATE', payload: map }); } catch {}
 }
 
@@ -1664,6 +1784,14 @@ function saveVatMap(map){
 
   function updateCartBadge() {
     if (!cartFab || !cartCount) return;
+
+    // ✅ Shop aus => Warenkorb immer verstecken
+  if (!mods.shop) {
+  cartFab.hidden = true;
+  cartFab.style.display = 'none'; // 🔴 ZWINGEND
+  return;
+}
+
     const cnt = cart.count();
     cartFab.hidden = false;
     cartCount.textContent = String(cnt);
@@ -2256,4 +2384,6 @@ if (location.pathname.endsWith("index.html") && location.hash === "#offers") {
   // z.B.:
   // fetch(`/api/public-profile?slug=${encodeURIComponent(slug)}`)
   //   .then(r=>r.json()).then(({conf, products}) => { ...apply... });
+})();
+
 })();
