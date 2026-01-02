@@ -29,7 +29,7 @@ if (EDIT_MODE) {
 
 /* ========== GLOBALER HOVER-FREEZE ========== */
 window.__hoverFreeze = false;
-;(async () => {
+;(() => {
   /* ============ Mini-Helpers ============ */
   const $  = (s, r=document) => r.querySelector(s);
   const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
@@ -59,7 +59,6 @@ window.__hoverFreeze = false;
   free: { on:true, threshold:89 }
   };
   let shipConf = Object.assign({}, shipDefaults, safeJson(localStorage.getItem(KEY_SHIP), {}));
-  // Wird nach serverHydrateLocalStorage() nochmal überschrieben (falls Server-Stand neuer ist).
   function saveShip(){
   localStorage.setItem(KEY_SHIP, JSON.stringify(shipConf));
   ping('shipping', shipConf);
@@ -67,30 +66,25 @@ window.__hoverFreeze = false;
   }
 
 // ======================= SERVER STATE (Vercel) =======================
-const USE_SERVER_STATE = true;
-
-// Diese API speichert die Builder-States serverseitig (api/data/site.json)
-// -> Änderungen im /builder sind damit auf ALLEN Geräten sichtbar.
-let __lastServerUpdatedAt = null;
-let __serverState = { ls: {} };
+const USE_SERVER_STATE = true; // später wenn du willst toggeln
 
 async function serverGetState(){
   if (!USE_SERVER_STATE) return null;
   try{
-    const r = await fetch(`/api/state-get?t=${Date.now()}`, { cache: 'no-store' });
+    const r = await fetch('/api/state-get', { cache: 'no-store' });
     if (!r.ok) return null;
-    return await r.json(); // z.B. { ok:true, state:{ls:{}}, updated_at }
+    return await r.json();
   }catch{
     return null;
   }
 }
 
 async function serverHydrateLocalStorage(){
-  const json = await serverGetState();
-  const ls = json?.state?.ls || json?.ls; // robust gegen alte Formate
-  if (!ls || typeof ls !== 'object') return false;
-
-  __lastServerUpdatedAt = json?.updated_at || json?.updatedAt || __lastServerUpdatedAt;
+  // Holt den globalen Zustand vom Server (Supabase über /api/state-get)
+  // und schreibt ihn in localStorage, bevor die Seite rendert.
+  const state = await serverGetState();
+  const ls = state && state.ls;
+  if (!ls || typeof ls !== 'object') return;
 
   try{
     Object.entries(ls).forEach(([k,v])=>{
@@ -99,10 +93,7 @@ async function serverHydrateLocalStorage(){
       const next = String(v);
       if (localStorage.getItem(k) !== next) localStorage.setItem(k, next);
     });
-    return true;
-  }catch{
-    return false;
-  }
+  }catch{}
 }
 
 let __persistT = null;
@@ -117,12 +108,20 @@ function serverSaveState(partial){
         body: JSON.stringify(partial || {})
       });
     }catch{}
-  }, 50);
+  }, 200);
 }
 
-// Wichtig: Server-Zustand zuerst in localStorage laden,
-// damit Mobile/andere PCs sofort den gleichen Stand sehen.
-try { await serverHydrateLocalStorage(); } catch {}
+// ======================= SERVER STATE (Vercel) =======================
+
+// BLOCKING Server-Hydration – KEIN Race Condition
+(async function bootstrapFromServer() {
+  try {
+    await serverHydrateLocalStorage();
+  } catch (e) {
+    console.warn("Server hydrate failed", e);
+  }
+})();
+
 
 
   // Live-Sync
@@ -263,39 +262,10 @@ if (fab) {
   const desc = $('#bizDesc');
   if(desc){ desc.textContent = (conf.desc || '').slice(0,500); }
 
-  
-
-// About-Überschrift (Public + Builder)
-(function applyAboutTitle(){
-  const title = String(conf.aboutTitle ?? '').trim();
-  if (!title) return;
-
-  const candidates = [
-    ...document.querySelectorAll(
-      '[data-about-title], #aboutTitle, #about .section-title, #information .section-title, section#about h2, section#information h2, h2.section-title'
-    )
-  ];
-
-  // Heuristik: H2 mit "About us" im About/Information-Block
-  document.querySelectorAll('h2').forEach(h => {
-    const cur = (h.textContent || '').trim();
-    if (/^about\s+us$/i.test(cur) && (h.closest('#about, #information, section') || h.closest('.section, .card'))) {
-      candidates.push(h);
-    }
-  });
-
-  // Unique + setzen
-  Array.from(new Set(candidates)).forEach(el => {
-    try { el.textContent = title.slice(0, 100); } catch {}
-  });
-})();
-// About/Information Überschrift (Public View + Builder)
-  const aboutTitleText = String(conf.aboutTitle || '').trim();
-  if (aboutTitleText) {
-    const t = aboutTitleText.slice(0, 100);
-    document.querySelectorAll(
-      '[data-about-title], #aboutTitle, #about .section-title, #information .section-title, #info .section-title, section#about h2, section#information h2, section#info h2'
-    ).forEach(el => { el.textContent = t; });
+  // ✅ About-Überschrift (wird sonst nie aus conf übernommen)
+  const aboutTitleNode = document.querySelector('#about .section-title');
+  if (aboutTitleNode) {
+    aboutTitleNode.textContent = ((conf.aboutTitle || 'About us')).slice(0, 100);
   }
 
   // Kontakt-Symbole anwenden
@@ -392,26 +362,18 @@ if (fab) {
   // Sofort-Sync ohne Reload
   window.bc?.addEventListener('message', (ev) => {
   const { type } = ev.data || {};
-
   if (type === 'theme') {
-    Object.assign(conf, safeJson(localStorage.getItem(KEY_CONF), {}));
-    applyConf();
+  Object.assign(conf, safeJson(localStorage.getItem(KEY_CONF), {}));
+  applyConf();
   }
-
-  if (type === 'mods') {
-    Object.assign(mods, safeJson(localStorage.getItem(KEY_MODS), {}));
-    applyMods();
-    try { typeof updateCartBadge === 'function' && updateCartBadge(); } catch {}
-  }
-
   if (type === 'products') {
-    // Shop-IIFE hängt einen Listener auf 'products-updated' und rendert neu.
-    document.dispatchEvent(new Event('products-updated'));
+  document.dispatchEvent(new Event('products-updated'));
   }
-
   // 'cart' wird im Warenkorb-IIFE behandelt
-});
-/* ============ PUZZLE Tiles (Deko) ============ */
+  });
+
+
+  /* ============ PUZZLE Tiles (Deko) ============ */
   ;(() => {
   const cs = getComputedStyle(document.documentElement);
   const cols    = parseInt(cs.getPropertyValue('--pz-cols')) || 6;
@@ -540,27 +502,22 @@ if (fab) {
   const bgVideoName = $('#bgVideoName');
 
   function setBgVideoFromFile(file){
-  if (!file) return;
+    if (!file) return;
 
-  const isMp4 = (file.type === 'video/mp4') || String(file.name||'').toLowerCase().endsWith('.mp4');
-  if (!isMp4) { alert('Bitte eine MP4-Datei wählen.'); return; }
+    // Optional: nur mp4 akzeptieren
+    const isMp4 = (file.type === 'video/mp4') || String(file.name||'').toLowerCase().endsWith('.mp4');
+    if (!isMp4) {
+      alert('Bitte eine MP4-Datei wählen.');
+      return;
+    }
 
-  // Achtung: MP4 als Data-URL kann groß werden. Limit (10MB) für Stabilität.
-  const maxBytes = 10 * 1024 * 1024;
-  if ((file.size || 0) > maxBytes) {
-    alert('Video ist zu groß (max. 10MB für Upload via Builder). Bitte kleineres MP4 verwenden.');
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    conf.bgVideo = String(reader.result || '');
+    const blobUrl = URL.createObjectURL(file);
+    conf.bgVideo = blobUrl;
     saveConf();
     applyConf();
+
     if (bgVideoName) bgVideoName.textContent = file.name || 'video.mp4';
-  };
-  reader.readAsDataURL(file);
-}
+  }
 
   // Button -> Finder öffnen
   bgVideoPick?.addEventListener('click', () => bgVideoFile?.click());
@@ -596,20 +553,21 @@ if (fab) {
   const bgImageName = $('#bgImageName');
 
   function setBgImageFromFile(file){
-  if (!file) return;
+    if (!file) return;
 
-  const isImg = String(file.type||'').startsWith('image/');
-  if (!isImg) { alert('Bitte eine Bilddatei wählen.'); return; }
+    const isImg = String(file.type||'').startsWith('image/');
+    if (!isImg) {
+      alert('Bitte eine Bilddatei wählen.');
+      return;
+    }
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    conf.bgImage = String(reader.result || '');
+    const blobUrl = URL.createObjectURL(file);
+    conf.bgImage = blobUrl;
     saveConf();
     applyConf();
+
     if (bgImageName) bgImageName.textContent = file.name || 'image';
-  };
-  reader.readAsDataURL(file);
-}
+  }
 
   // Button -> Finder öffnen
   bgImagePick?.addEventListener('click', () => bgImageFile?.click());
@@ -826,15 +784,7 @@ if (fab) {
   clampEditable(d);
 
   // Ziel-Elemente im Layout
-  const aboutTitleEl =
-    document.querySelector('[data-about-title]') ||
-    document.querySelector('#aboutTitle') ||
-    document.querySelector('#about .section-title') ||
-    document.querySelector('#information .section-title') ||
-    document.querySelector('#info .section-title') ||
-    document.querySelector('section#about h2') ||
-    document.querySelector('section#information h2') ||
-    document.querySelector('section#info h2');
+  const aboutTitleEl = document.querySelector('#about .section-title');
   const descEl = document.getElementById('bizDesc');
 
   // Live in DOM schreiben
@@ -842,7 +792,7 @@ if (fab) {
   if (descEl) descEl.innerHTML = d.innerHTML || '';
 
   // ✅ In conf speichern (Titel + Text)
-  conf.aboutTitle = ((aboutTitleEl?.textContent || a.textContent || 'About us')).slice(0,100);
+  conf.aboutTitle = (aboutTitleEl?.textContent || 'About us').slice(0,100);
   conf.desc       = (descEl?.textContent || '').slice(0,500);
 
   saveConf();
@@ -941,7 +891,6 @@ if (k === 'shop' && !cb.checked) {
   if(k==='services'){ mods.services = cb.checked; }
   if(k==='calendar'){ mods.booking = cb.checked; }
   localStorage.setItem(KEY_MODS, JSON.stringify(mods));
-  ping('mods', { mods });
   serverSaveState({ ls: { [KEY_MODS]: JSON.stringify(mods) } });
   applyMods();
   try { typeof updateCartBadge === 'function' && updateCartBadge(); } catch {}
@@ -1361,104 +1310,15 @@ clearBtn?.addEventListener('click', ()=>{
   products = []; saveProducts(products); renderEditor(); renderGrid();
 });
 
-// Re-render wenn Produkte von außen aktualisiert wurden (Server / anderes Gerät)
-  function reloadProductsFromStorage(){
-    products = loadProducts();
-    // Normalize vat
-    products = (products || []).map(p => ({ ...p, vat: Number.isFinite(+p.vat) ? +p.vat : 0 }));
-  }
-
-  document.addEventListener('products-updated', () => {
-    if (window.__hoverFreeze) return;
-    try { reloadProductsFromStorage(); } catch {}
-    renderEditor();
-    renderGrid();
-  });
-
-  window.addEventListener('storage', (e) => {
-    if (e.key === KEY_PRODUCTS) {
-      try { reloadProductsFromStorage(); } catch {}
-      renderEditor();
-      renderGrid();
-    }
-  });
-
-  // Initial
-  renderEditor();
-  renderGrid();
+// Initial
+renderEditor();
+renderGrid();
 })();
 
 // Apply Mods/Conf/Reviews beim Start
 applyMods();
 applyConf();
 applyReviewsUI();
-
-// ======================= LIVE PULL (Public View) =======================
-// Damit www.glowupmoments.eu ohne Reload sehr schnell übernimmt:
-// Wir prüfen regelmäßig updated_at. Bei Änderung: localStorage hydrieren + UI anwenden.
-if (!EDIT_MODE && USE_SERVER_STATE) {
-  let __pullBusy = false;
-  setInterval(async () => {
-    if (__pullBusy) return;
-    __pullBusy = true;
-    try{
-      const j = await serverGetState();
-      const upd = j?.updated_at || null;
-      if (!j || !upd || upd === __lastServerUpdatedAt) return;
-
-      __lastServerUpdatedAt = upd;
-      __serverState = (j && j.state && typeof j.state === 'object') ? j.state : (__serverState || { ls:{} });
-
-      const ls = __serverState.ls;
-      if (ls && typeof ls === 'object'){
-        try{
-          Object.entries(ls).forEach(([k,v])=>{
-            if (typeof k !== 'string') return;
-            if (v == null) return;
-            const next = String(v);
-            if (localStorage.getItem(k) !== next) localStorage.setItem(k, next);
-          });
-        }catch{}
-      }
-
-      // In-memory State aktualisieren + UI neu anwenden
-      try { Object.assign(mods, safeJson(localStorage.getItem(KEY_MODS), {})); } catch {}
-      try { Object.assign(conf, safeJson(localStorage.getItem(KEY_CONF), {})); } catch {}
-      applyMods();
-      applyConf();
-      try { applyReviewsUI(); } catch {}
-      try { document.dispatchEvent(new Event('products-updated')); } catch {}
-      try { typeof updateCartBadge === 'function' && updateCartBadge(); } catch {}
-    }catch{} finally{
-      __pullBusy = false;
-    }
-  }, 250);
-}
-
-
-// --- Public Live-Pull (Server -> UI), damit Änderungen vom Builder ohne Refresh erscheinen ---
-if (!EDIT_MODE && USE_SERVER_STATE){
-  setInterval(async () => {
-    try{
-      const j = await serverGetState();
-      const upd = j?.updated_at || j?.updatedAt;
-      if (!upd) return;
-      if (__lastServerUpdatedAt && upd === __lastServerUpdatedAt) return;
-
-      // neu -> LS hydrieren
-      const changed = await serverHydrateLocalStorage();
-      if (!changed) return;
-
-      // Apply: Theme + Mods + Produkte
-      try { Object.assign(conf,  safeJson(localStorage.getItem(KEY_CONF), {})); } catch {}
-      try { Object.assign(mods,  safeJson(localStorage.getItem(KEY_MODS), {})); } catch {}
-      applyMods();
-      applyConf();
-      // Produkte neu rendern (Shop-IIFE hört darauf)
-      try { document.dispatchEvent(new Event('products-updated')); } catch {}
-    }catch{}
-  }, 300);
-}
 
 if (EDIT_MODE) {
   const t  = document.getElementById('edTitle');
@@ -1467,12 +1327,13 @@ if (EDIT_MODE) {
 
   if (t)  t.textContent  = (conf.company || 'OneDot').slice(0, 50);
   if (s1) s1.textContent = (conf.slogan  || '').slice(0, 200);
-  if (s2) s2.textContent = (conf.slogan2 || '').slice(0, 200);
+  if (s2) s2.textContent = (conf.slogan2 || '').slice(0, 200)
+  // ✅ About-Felder im Builder vorbefüllen
+  const aT = document.getElementById('edAboutTitle');
+  const aD = document.getElementById('edAboutDesc');
+  if (aT) aT.textContent = ((conf.aboutTitle || 'About us')).slice(0, 100);
+  if (aD) aD.textContent = ((conf.desc || '')).slice(0, 500);
 
-const aT = document.getElementById('edAboutTitle');
-const aD = document.getElementById('edAboutDesc');
-if (aT) aT.textContent = (conf.aboutTitle || '').slice(0, 100);
-if (aD) aD.textContent = (conf.desc || '').slice(0, 500);
 }
 
 
@@ -1485,10 +1346,8 @@ pickBtn?.addEventListener('click', () => fileIn?.click());
 fileIn?.addEventListener('change', () => {
   const f = fileIn.files?.[0];
   if (!f) return;
-
-  const reader = new FileReader();
-  reader.onload = () => setLogo(String(reader.result || ''));
-  reader.readAsDataURL(f);
+  const blobUrl = URL.createObjectURL(f);
+  setLogo(blobUrl);
 });
 
 ['dragenter','dragover'].forEach(ev =>
@@ -1500,10 +1359,8 @@ dropRow?.addEventListener(ev, e => { e.preventDefault(); dropRow.classList.remov
 dropRow?.addEventListener('drop', (e) => {
   const f = e.dataTransfer?.files?.[0];
   if (!f) return;
-
-  const reader = new FileReader();
-  reader.onload = () => setLogo(String(reader.result || ''));
-  reader.readAsDataURL(f);
+  const blobUrl = URL.createObjectURL(f);
+  setLogo(blobUrl);
 });
 
 // Utils: Panel-Inject für reine Shop-Seite
