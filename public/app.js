@@ -263,7 +263,33 @@ if (fab) {
   const desc = $('#bizDesc');
   if(desc){ desc.textContent = (conf.desc || '').slice(0,500); }
 
-  // About/Information Überschrift (Public View + Builder)
+  
+
+// About-Überschrift (Public + Builder)
+(function applyAboutTitle(){
+  const title = String(conf.aboutTitle ?? '').trim();
+  if (!title) return;
+
+  const candidates = [
+    ...document.querySelectorAll(
+      '[data-about-title], #aboutTitle, #about .section-title, #information .section-title, section#about h2, section#information h2, h2.section-title'
+    )
+  ];
+
+  // Heuristik: H2 mit "About us" im About/Information-Block
+  document.querySelectorAll('h2').forEach(h => {
+    const cur = (h.textContent || '').trim();
+    if (/^about\s+us$/i.test(cur) && (h.closest('#about, #information, section') || h.closest('.section, .card'))) {
+      candidates.push(h);
+    }
+  });
+
+  // Unique + setzen
+  Array.from(new Set(candidates)).forEach(el => {
+    try { el.textContent = title.slice(0, 100); } catch {}
+  });
+})();
+// About/Information Überschrift (Public View + Builder)
   const aboutTitleText = String(conf.aboutTitle || '').trim();
   if (aboutTitleText) {
     const t = aboutTitleText.slice(0, 100);
@@ -1442,6 +1468,11 @@ if (EDIT_MODE) {
   if (t)  t.textContent  = (conf.company || 'OneDot').slice(0, 50);
   if (s1) s1.textContent = (conf.slogan  || '').slice(0, 200);
   if (s2) s2.textContent = (conf.slogan2 || '').slice(0, 200);
+
+const aT = document.getElementById('edAboutTitle');
+const aD = document.getElementById('edAboutDesc');
+if (aT) aT.textContent = (conf.aboutTitle || '').slice(0, 100);
+if (aD) aD.textContent = (conf.desc || '').slice(0, 500);
 }
 
 
