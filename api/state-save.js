@@ -5,42 +5,41 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-const SITE_KEY = process.env.SITE_KEY || "glowupmoments"; // muss identisch zu state-get sein
+const SITE_KEY = process.env.SITE_KEY || "glowupmoments";
 
 export default async function handler(req, res) {
+  // niemals cachen (wichtig bei Vercel/CDN/Browser)
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+
   try {
     if (req.method !== "POST") return res.status(405).end();
 
-    // Optional: zusätzliche Basic-Auth hier absichern (falls Middleware nicht greift)
-    const u = process.env.BUILDER_USER || "";
-    const p = process.env.BUILDER_PASS || "";
-    if (u && p) {
-      const auth = req.headers.authorization || "";
-      const [scheme, encoded] = auth.split(" ");
-      if (scheme !== "Basic" || !encoded) {
-        res.setHeader("WWW-Authenticate", 'Basic realm="Builder"');
-        return res.status(401).send("Authentication required");
-      }
-      const decoded = Buffer.from(encoded, "base64").toString("utf8");
-      const i = decoded.indexOf(":");
-      const user = decoded.slice(0, i);
-      const pass = decoded.slice(i + 1);
-      if (user !== u || pass !== p) {
-        res.setHeader("WWW-Authenticate", 'Basic realm="Builder"');
-        return res.status(401).send("Authentication required");
-      }
-    }
+    const body = req.body || {};
+    const ls = (body && body.ls && typeof body.ls === "object") ? body.ls : {};
 
-    const body = req.body && typeof req.body === "object" ? req.body : {};
-
-    const { error } = await supabase
+    // Merge: bestehenden State holen
+    const { data: existing, error: getErr } = await supabase
       .from("site_state")
-      .upsert(
-        { key: SITE_KEY, state: body, updated_at: new Date().toISOString() },
-        { onConflict: "key" }
-      );
+      .select("state")
+      .eq("key", SITE_KEY)
+      .maybeSingle();
 
-    if (error) throw error;
+    if (getErr) throw getErr;
+
+    const current = (existing && existing.state && typeof existing.state === "object")
+      ? existing.state
+      : {};
+
+    const next = { ...current, ls: { ...(current.ls || {}), ...ls } };
+
+    // Upsert in Supabase
+    const { error: upErr } = await supabase
+      .from("site_state")
+      .upsert({ key: SITE_KEY, state: next }, { onConflict: "key" });
+
+    if (upErr) throw upErr;
 
     return res.status(200).json({ ok: true });
   } catch (err) {

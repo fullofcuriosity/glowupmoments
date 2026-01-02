@@ -111,14 +111,17 @@ function serverSaveState(partial){
   }, 200);
 }
 
-// Wichtig: Server-Zustand zuerst in localStorage laden (damit Mobile/andere PCs den gleichen Stand sehen)
-(async () => {
+// ======================= SERVER STATE (Vercel) =======================
+
+// BLOCKING Server-Hydration – KEIN Race Condition
+(async function bootstrapFromServer() {
   try {
     await serverHydrateLocalStorage();
   } catch (e) {
-    // optional: console.warn("hydrate failed", e);
+    console.warn("Server hydrate failed", e);
   }
 })();
+
 
 
   // Live-Sync
