@@ -29,7 +29,7 @@ if (EDIT_MODE) {
 
 /* ========== GLOBALER HOVER-FREEZE ========== */
 window.__hoverFreeze = false;
-;(() => {
+;(async () => {
   /* ============ Mini-Helpers ============ */
   const $  = (s, r=document) => r.querySelector(s);
   const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
@@ -59,6 +59,7 @@ window.__hoverFreeze = false;
   free: { on:true, threshold:89 }
   };
   let shipConf = Object.assign({}, shipDefaults, safeJson(localStorage.getItem(KEY_SHIP), {}));
+  // Wird nach serverHydrateLocalStorage() nochmal überschrieben (falls Server-Stand neuer ist).
   function saveShip(){
   localStorage.setItem(KEY_SHIP, JSON.stringify(shipConf));
   ping('shipping', shipConf);
@@ -66,25 +67,29 @@ window.__hoverFreeze = false;
   }
 
 // ======================= SERVER STATE (Vercel) =======================
-const USE_SERVER_STATE = true; // später wenn du willst toggeln
+const USE_SERVER_STATE = true;
+
+// Diese API speichert die Builder-States serverseitig (api/data/site.json)
+// -> Änderungen im /builder sind damit auf ALLEN Geräten sichtbar.
+let __lastServerUpdatedAt = null;
 
 async function serverGetState(){
   if (!USE_SERVER_STATE) return null;
   try{
-    const r = await fetch('/api/state-get', { cache: 'no-store' });
+    const r = await fetch(`/api/state-get?t=${Date.now()}`, { cache: 'no-store' });
     if (!r.ok) return null;
-    return await r.json();
+    return await r.json(); // z.B. { ok:true, state:{ls:{}}, updated_at }
   }catch{
     return null;
   }
 }
 
 async function serverHydrateLocalStorage(){
-  // Holt den globalen Zustand vom Server (Supabase über /api/state-get)
-  // und schreibt ihn in localStorage, bevor die Seite rendert.
-  const state = await serverGetState();
-  const ls = state && state.ls;
-  if (!ls || typeof ls !== 'object') return;
+  const json = await serverGetState();
+  const ls = json?.state?.ls || json?.ls; // robust gegen alte Formate
+  if (!ls || typeof ls !== 'object') return false;
+
+  __lastServerUpdatedAt = json?.updated_at || json?.updatedAt || __lastServerUpdatedAt;
 
   try{
     Object.entries(ls).forEach(([k,v])=>{
@@ -93,7 +98,10 @@ async function serverHydrateLocalStorage(){
       const next = String(v);
       if (localStorage.getItem(k) !== next) localStorage.setItem(k, next);
     });
-  }catch{}
+    return true;
+  }catch{
+    return false;
+  }
 }
 
 let __persistT = null;
@@ -111,17 +119,9 @@ function serverSaveState(partial){
   }, 200);
 }
 
-// ======================= SERVER STATE (Vercel) =======================
-
-// BLOCKING Server-Hydration – KEIN Race Condition
-(async function bootstrapFromServer() {
-  try {
-    await serverHydrateLocalStorage();
-  } catch (e) {
-    console.warn("Server hydrate failed", e);
-  }
-})();
-
+// Wichtig: Server-Zustand zuerst in localStorage laden,
+// damit Mobile/andere PCs sofort den gleichen Stand sehen.
+try { await serverHydrateLocalStorage(); } catch {}
 
 
   // Live-Sync
@@ -356,18 +356,26 @@ if (fab) {
   // Sofort-Sync ohne Reload
   window.bc?.addEventListener('message', (ev) => {
   const { type } = ev.data || {};
+
   if (type === 'theme') {
-  Object.assign(conf, safeJson(localStorage.getItem(KEY_CONF), {}));
-  applyConf();
+    Object.assign(conf, safeJson(localStorage.getItem(KEY_CONF), {}));
+    applyConf();
   }
+
+  if (type === 'mods') {
+    Object.assign(mods, safeJson(localStorage.getItem(KEY_MODS), {}));
+    applyMods();
+    try { typeof updateCartBadge === 'function' && updateCartBadge(); } catch {}
+  }
+
   if (type === 'products') {
-  document.dispatchEvent(new Event('products-updated'));
+    // Shop-IIFE hängt einen Listener auf 'products-updated' und rendert neu.
+    document.dispatchEvent(new Event('products-updated'));
   }
+
   // 'cart' wird im Warenkorb-IIFE behandelt
-  });
-
-
-  /* ============ PUZZLE Tiles (Deko) ============ */
+});
+/* ============ PUZZLE Tiles (Deko) ============ */
   ;(() => {
   const cs = getComputedStyle(document.documentElement);
   const cols    = parseInt(cs.getPropertyValue('--pz-cols')) || 6;
@@ -885,6 +893,7 @@ if (k === 'shop' && !cb.checked) {
   if(k==='services'){ mods.services = cb.checked; }
   if(k==='calendar'){ mods.booking = cb.checked; }
   localStorage.setItem(KEY_MODS, JSON.stringify(mods));
+  ping('mods', { mods });
   serverSaveState({ ls: { [KEY_MODS]: JSON.stringify(mods) } });
   applyMods();
   try { typeof updateCartBadge === 'function' && updateCartBadge(); } catch {}
@@ -1304,15 +1313,61 @@ clearBtn?.addEventListener('click', ()=>{
   products = []; saveProducts(products); renderEditor(); renderGrid();
 });
 
-// Initial
-renderEditor();
-renderGrid();
+// Re-render wenn Produkte von außen aktualisiert wurden (Server / anderes Gerät)
+  function reloadProductsFromStorage(){
+    products = loadProducts();
+    // Normalize vat
+    products = (products || []).map(p => ({ ...p, vat: Number.isFinite(+p.vat) ? +p.vat : 0 }));
+  }
+
+  document.addEventListener('products-updated', () => {
+    if (window.__hoverFreeze) return;
+    try { reloadProductsFromStorage(); } catch {}
+    renderEditor();
+    renderGrid();
+  });
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === KEY_PRODUCTS) {
+      try { reloadProductsFromStorage(); } catch {}
+      renderEditor();
+      renderGrid();
+    }
+  });
+
+  // Initial
+  renderEditor();
+  renderGrid();
 })();
 
 // Apply Mods/Conf/Reviews beim Start
 applyMods();
 applyConf();
 applyReviewsUI();
+
+// --- Public Live-Pull (Server -> UI), damit Änderungen vom Builder ohne Refresh erscheinen ---
+if (!EDIT_MODE && USE_SERVER_STATE){
+  setInterval(async () => {
+    try{
+      const j = await serverGetState();
+      const upd = j?.updated_at || j?.updatedAt;
+      if (!upd) return;
+      if (__lastServerUpdatedAt && upd === __lastServerUpdatedAt) return;
+
+      // neu -> LS hydrieren
+      const changed = await serverHydrateLocalStorage();
+      if (!changed) return;
+
+      // Apply: Theme + Mods + Produkte
+      try { Object.assign(conf,  safeJson(localStorage.getItem(KEY_CONF), {})); } catch {}
+      try { Object.assign(mods,  safeJson(localStorage.getItem(KEY_MODS), {})); } catch {}
+      applyMods();
+      applyConf();
+      // Produkte neu rendern (Shop-IIFE hört darauf)
+      try { document.dispatchEvent(new Event('products-updated')); } catch {}
+    }catch{}
+  }, 1500);
+}
 
 if (EDIT_MODE) {
   const t  = document.getElementById('edTitle');
