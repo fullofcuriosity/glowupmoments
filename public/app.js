@@ -25,6 +25,12 @@ if (EDIT_MODE) {
     document.getElementById('quickFab')?.removeAttribute('hidden');
     // quickPanel bleibt hidden bis du auf den FAB klickst (so wie jetzt)
   });
+
+
+  const aT = document.getElementById('edAboutTitle');
+  const aD = document.getElementById('edAboutDesc');
+  if (aT) aT.textContent = (conf.aboutTitle || 'About us').slice(0, 100);
+  if (aD) aD.textContent = (conf.desc || '').slice(0, 500);
 }
 
 /* ========== GLOBALER HOVER-FREEZE ========== */
@@ -111,17 +117,14 @@ function serverSaveState(partial){
   }, 200);
 }
 
-// ======================= SERVER STATE (Vercel) =======================
-
-// BLOCKING Server-Hydration – KEIN Race Condition
-(async function bootstrapFromServer() {
+// Wichtig: Server-Zustand zuerst in localStorage laden (damit Mobile/andere PCs den gleichen Stand sehen)
+(async () => {
   try {
     await serverHydrateLocalStorage();
   } catch (e) {
-    console.warn("Server hydrate failed", e);
+    // optional: console.warn("hydrate failed", e);
   }
 })();
-
 
 
   // Live-Sync
@@ -154,6 +157,9 @@ function serverSaveState(partial){
 
   // About-Text
   desc: 'HIER DEIN DEFAULT ABOUT TEXT ...',
+
+  // About-Überschrift
+  aboutTitle: 'About us',
 
   // ✅ NEU: Profil/Branding
   company: 'Dotagora',
@@ -261,12 +267,6 @@ if (fab) {
 
   const desc = $('#bizDesc');
   if(desc){ desc.textContent = (conf.desc || '').slice(0,500); }
-
-  // ✅ About-Überschrift (wird sonst nie aus conf übernommen)
-  const aboutTitleNode = document.querySelector('#about .section-title');
-  if (aboutTitleNode) {
-    aboutTitleNode.textContent = ((conf.aboutTitle || 'About us')).slice(0, 100);
-  }
 
   // Kontakt-Symbole anwenden
   applySocialVisibility();
@@ -1327,13 +1327,7 @@ if (EDIT_MODE) {
 
   if (t)  t.textContent  = (conf.company || 'OneDot').slice(0, 50);
   if (s1) s1.textContent = (conf.slogan  || '').slice(0, 200);
-  if (s2) s2.textContent = (conf.slogan2 || '').slice(0, 200)
-  // ✅ About-Felder im Builder vorbefüllen
-  const aT = document.getElementById('edAboutTitle');
-  const aD = document.getElementById('edAboutDesc');
-  if (aT) aT.textContent = ((conf.aboutTitle || 'About us')).slice(0, 100);
-  if (aD) aD.textContent = ((conf.desc || '')).slice(0, 500);
-
+  if (s2) s2.textContent = (conf.slogan2 || '').slice(0, 200);
 }
 
 
