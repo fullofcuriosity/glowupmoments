@@ -1,7 +1,6 @@
 {
   "framework": null,
   "buildCommand": null,
-  "devCommand": "npx serve public -l $PORT",
   "outputDirectory": "public",
   "routes": [
     { "src": "^/api/(.*)$", "dest": "/api/$1" },
