@@ -1,10 +1,15 @@
 {
-  "framework": null,
-  "buildCommand": null,
-  "outputDirectory": "public",
+  "version": 2,
+  "cleanUrls": true,
+  "trailingSlash": false,
   "routes": [
     { "src": "^/api/(.*)$", "dest": "/api/$1" },
+
     { "src": "^/builder/?$", "dest": "/api/builder" },
-    { "src": "^/(.*)$", "dest": "/$1" }
+    { "src": "^/builder\\.html$", "dest": "/api/builder" },
+
+    { "handle": "filesystem" },
+
+    { "src": "^/([^./]+)$", "dest": "/index.html" }
   ]
 }
