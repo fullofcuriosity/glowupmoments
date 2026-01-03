@@ -135,6 +135,19 @@ function serverSaveState(partial){
   /* ============ State (mods & conf) ============ */
   function safeJson(s, fb){ try { return s ? JSON.parse(s) : fb; } catch { return fb; } }
 
+// Datei -> data: URL (funktioniert auf allen Geräten, speicherbar am Server)
+function readFileAsDataURL(file){
+  return new Promise((resolve, reject) => {
+    try {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result || ''));
+      fr.onerror = () => reject(fr.error || new Error('FileReader failed'));
+      fr.readAsDataURL(file);
+    } catch (e) { reject(e); }
+  });
+}
+
+
   const defaultFont =
   getComputedStyle(document.documentElement).getPropertyValue('--ff').trim() ||
   "system-ui,-apple-system,Segoe UI,Roboto,sans-serif";
@@ -501,7 +514,7 @@ if (fab) {
   const bgVideoDrop = $('#bgVideoDrop');
   const bgVideoName = $('#bgVideoName');
 
-  function setBgVideoFromFile(file){
+  async function setBgVideoFromFile(file){
     if (!file) return;
 
     // Optional: nur mp4 akzeptieren
@@ -511,15 +524,26 @@ if (fab) {
       return;
     }
 
-    const blobUrl = URL.createObjectURL(file);
-    conf.bgVideo = blobUrl;
-    saveConf();
-    applyConf();
+    // WICHTIG: blob: URLs funktionieren NICHT auf anderen Geräten.
+    // Daher: als data: URL speichern (nur sinnvoll bei kleinen Videos).
+    const MAX = 2 * 1024 * 1024; // 2MB – darüber bitte als URL hochladen (Supabase Storage o.ä.)
+    if ((file.size || 0) > MAX) {
+      alert('Das Video ist zu groß für Server-State. Bitte lade es als MP4 irgendwo hoch und trage die URL ein (oder wir bauen Upload via Supabase Storage).');
+      return;
+    }
 
-    if (bgVideoName) bgVideoName.textContent = file.name || 'video.mp4';
+    try {
+      const dataUrl = await readFileAsDataURL(file);
+      conf.bgVideo = dataUrl;
+      saveConf();
+      applyConf();
+      if (bgVideoName) bgVideoName.textContent = file.name || 'video.mp4';
+    } catch (e) {
+      alert('Video konnte nicht gelesen werden.');
+    }
   }
 
-  // Button -> Finder öffnen
+// Button -> Finder öffnen
   bgVideoPick?.addEventListener('click', () => bgVideoFile?.click());
 
   // Datei gewählt
@@ -552,7 +576,7 @@ if (fab) {
   const bgImageDrop = $('#bgImageDrop');
   const bgImageName = $('#bgImageName');
 
-  function setBgImageFromFile(file){
+  async function setBgImageFromFile(file){
     if (!file) return;
 
     const isImg = String(file.type||'').startsWith('image/');
@@ -561,15 +585,26 @@ if (fab) {
       return;
     }
 
-    const blobUrl = URL.createObjectURL(file);
-    conf.bgImage = blobUrl;
-    saveConf();
-    applyConf();
+    // WICHTIG: blob: URLs funktionieren NICHT auf anderen Geräten.
+    // Daher: als data: URL speichern (funktioniert überall).
+    const MAX = 3 * 1024 * 1024; // 3MB
+    if ((file.size || 0) > MAX) {
+      alert('Bild ist sehr groß. Bitte komprimieren (<= 3MB) oder als URL hosten.');
+      // trotzdem versuchen
+    }
 
-    if (bgImageName) bgImageName.textContent = file.name || 'image';
+    try {
+      const dataUrl = await readFileAsDataURL(file);
+      conf.bgImage = dataUrl;
+      saveConf();
+      applyConf();
+      if (bgImageName) bgImageName.textContent = file.name || 'image';
+    } catch (e) {
+      alert('Bild konnte nicht gelesen werden.');
+    }
   }
 
-  // Button -> Finder öffnen
+// Button -> Finder öffnen
   bgImagePick?.addEventListener('click', () => bgImageFile?.click());
 
   // Datei gewählt
@@ -788,11 +823,11 @@ if (fab) {
   const descEl = document.getElementById('bizDesc');
 
   // Live in DOM schreiben
-  if (aboutTitleEl) aboutTitleEl.innerHTML = a.innerHTML || 'About us';
+  if (aboutTitleEl) aboutTitleEl.innerHTML = a.innerHTML || conf.aboutTitle || 'Über uns';
   if (descEl) descEl.innerHTML = d.innerHTML || '';
 
   // ✅ In conf speichern (Titel + Text)
-  conf.aboutTitle = (aboutTitleEl?.textContent || 'About us').slice(0,100);
+  conf.aboutTitle = (aboutTitleEl?.textContent || conf.aboutTitle || 'Über uns').slice(0,100);
   conf.desc       = (descEl?.textContent || '').slice(0,500);
 
   saveConf();
@@ -1341,8 +1376,7 @@ pickBtn?.addEventListener('click', () => fileIn?.click());
 fileIn?.addEventListener('change', () => {
   const f = fileIn.files?.[0];
   if (!f) return;
-  const blobUrl = URL.createObjectURL(f);
-  setLogo(blobUrl);
+  readFileAsDataURL(f).then(setLogo).catch(()=>alert('Bild konnte nicht gelesen werden.'));
 });
 
 ['dragenter','dragover'].forEach(ev =>
@@ -1354,8 +1388,7 @@ dropRow?.addEventListener(ev, e => { e.preventDefault(); dropRow.classList.remov
 dropRow?.addEventListener('drop', (e) => {
   const f = e.dataTransfer?.files?.[0];
   if (!f) return;
-  const blobUrl = URL.createObjectURL(f);
-  setLogo(blobUrl);
+  readFileAsDataURL(f).then(setLogo).catch(()=>alert('Bild konnte nicht gelesen werden.'));
 });
 
 // Utils: Panel-Inject für reine Shop-Seite
