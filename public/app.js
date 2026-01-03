@@ -118,7 +118,7 @@ try {
   // optional: console.warn("hydrate failed", e);
 }
 
-  // Live-Sync
+// Live-Sync
   const CART_KEY = 'od_cart';
 
 
@@ -180,6 +180,17 @@ try {
   // WICHTIG: Defaults nur wenn es noch nichts gibt:
   const conf = storedConf ? Object.assign({}, confDefaults, storedConf)
   : Object.assign({}, confDefaults);
+  // INITIAL APPLY (sofort, ohne "Dotagora"-Flash)
+  try { applyConf(); } catch {}
+  try { applyMods(); } catch {}
+
+  // Seite erst JETZT sichtbar machen (index.html kann html{visibility:hidden} setzen)
+  try {
+    const bootStyle = document.getElementById('od-boot-hide');
+    if (bootStyle) bootStyle.remove();
+    document.documentElement.style.visibility = 'visible';
+  } catch {}
+
 
   // Beim ersten Mal sofort speichern, damit "leer" später leer bleiben darf
   if (!storedConf) {
