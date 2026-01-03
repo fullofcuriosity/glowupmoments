@@ -1,5 +1,4 @@
-(async () => {
-  try { document.documentElement.style.visibility = 'hidden'; } catch {}
+(async function(){
 // GLOBAL geteilter BroadcastChannel (für alle IIFEs)
 window.bc = window.bc || (('BroadcastChannel' in window) ? new BroadcastChannel('od_sync') : null);
 
@@ -113,14 +112,11 @@ function serverSaveState(partial){
 }
 
 // Wichtig: Server-Zustand zuerst in localStorage laden (damit Mobile/andere PCs den gleichen Stand sehen)
-  // Wichtig: Server-Zustand zuerst in localStorage laden (damit Mobile/andere PCs den gleichen Stand sehen)
-  try {
-    await serverHydrateLocalStorage();
-  } catch (e) {
-    // optional: console.warn('hydrate failed', e);
-  }
-
-
+try {
+  await serverHydrateLocalStorage();
+} catch (e) {
+  // optional: console.warn("hydrate failed", e);
+}
 
   // Live-Sync
   const CART_KEY = 'od_cart';
@@ -134,19 +130,6 @@ function serverSaveState(partial){
 
   /* ============ State (mods & conf) ============ */
   function safeJson(s, fb){ try { return s ? JSON.parse(s) : fb; } catch { return fb; } }
-
-// Datei -> data: URL (funktioniert auf allen Geräten, speicherbar am Server)
-function readFileAsDataURL(file){
-  return new Promise((resolve, reject) => {
-    try {
-      const fr = new FileReader();
-      fr.onload = () => resolve(String(fr.result || ''));
-      fr.onerror = () => reject(fr.error || new Error('FileReader failed'));
-      fr.readAsDataURL(file);
-    } catch (e) { reject(e); }
-  });
-}
-
 
   const defaultFont =
   getComputedStyle(document.documentElement).getPropertyValue('--ff').trim() ||
@@ -165,9 +148,6 @@ function readFileAsDataURL(file){
 
   // About-Text
   desc: 'HIER DEIN DEFAULT ABOUT TEXT ...',
-
-  // About-Überschrift
-  aboutTitle: 'Über uns',
 
   // ✅ NEU: Profil/Branding
   company: 'Dotagora',
@@ -275,11 +255,6 @@ if (fab) {
 
   const desc = $('#bizDesc');
   if(desc){ desc.textContent = (conf.desc || '').slice(0,500); }
-
-  // About-Überschrift anwenden (kein 'About us'-Flash mehr)
-  const aboutTitleEl = document.querySelector('#about .section-title');
-  if (aboutTitleEl) aboutTitleEl.textContent = (conf.aboutTitle || 'Über uns').slice(0, 100);
-
 
   // Kontakt-Symbole anwenden
   applySocialVisibility();
@@ -514,7 +489,7 @@ if (fab) {
   const bgVideoDrop = $('#bgVideoDrop');
   const bgVideoName = $('#bgVideoName');
 
-  async function setBgVideoFromFile(file){
+  function setBgVideoFromFile(file){
     if (!file) return;
 
     // Optional: nur mp4 akzeptieren
@@ -524,26 +499,15 @@ if (fab) {
       return;
     }
 
-    // WICHTIG: blob: URLs funktionieren NICHT auf anderen Geräten.
-    // Daher: als data: URL speichern (nur sinnvoll bei kleinen Videos).
-    const MAX = 2 * 1024 * 1024; // 2MB – darüber bitte als URL hochladen (Supabase Storage o.ä.)
-    if ((file.size || 0) > MAX) {
-      alert('Das Video ist zu groß für Server-State. Bitte lade es als MP4 irgendwo hoch und trage die URL ein (oder wir bauen Upload via Supabase Storage).');
-      return;
-    }
+    const blobUrl = URL.createObjectURL(file);
+    conf.bgVideo = blobUrl;
+    saveConf();
+    applyConf();
 
-    try {
-      const dataUrl = await readFileAsDataURL(file);
-      conf.bgVideo = dataUrl;
-      saveConf();
-      applyConf();
-      if (bgVideoName) bgVideoName.textContent = file.name || 'video.mp4';
-    } catch (e) {
-      alert('Video konnte nicht gelesen werden.');
-    }
+    if (bgVideoName) bgVideoName.textContent = file.name || 'video.mp4';
   }
 
-// Button -> Finder öffnen
+  // Button -> Finder öffnen
   bgVideoPick?.addEventListener('click', () => bgVideoFile?.click());
 
   // Datei gewählt
@@ -576,7 +540,7 @@ if (fab) {
   const bgImageDrop = $('#bgImageDrop');
   const bgImageName = $('#bgImageName');
 
-  async function setBgImageFromFile(file){
+  function setBgImageFromFile(file){
     if (!file) return;
 
     const isImg = String(file.type||'').startsWith('image/');
@@ -585,26 +549,15 @@ if (fab) {
       return;
     }
 
-    // WICHTIG: blob: URLs funktionieren NICHT auf anderen Geräten.
-    // Daher: als data: URL speichern (funktioniert überall).
-    const MAX = 3 * 1024 * 1024; // 3MB
-    if ((file.size || 0) > MAX) {
-      alert('Bild ist sehr groß. Bitte komprimieren (<= 3MB) oder als URL hosten.');
-      // trotzdem versuchen
-    }
+    const blobUrl = URL.createObjectURL(file);
+    conf.bgImage = blobUrl;
+    saveConf();
+    applyConf();
 
-    try {
-      const dataUrl = await readFileAsDataURL(file);
-      conf.bgImage = dataUrl;
-      saveConf();
-      applyConf();
-      if (bgImageName) bgImageName.textContent = file.name || 'image';
-    } catch (e) {
-      alert('Bild konnte nicht gelesen werden.');
-    }
+    if (bgImageName) bgImageName.textContent = file.name || 'image';
   }
 
-// Button -> Finder öffnen
+  // Button -> Finder öffnen
   bgImagePick?.addEventListener('click', () => bgImageFile?.click());
 
   // Datei gewählt
@@ -823,11 +776,11 @@ if (fab) {
   const descEl = document.getElementById('bizDesc');
 
   // Live in DOM schreiben
-  if (aboutTitleEl) aboutTitleEl.innerHTML = a.innerHTML || conf.aboutTitle || 'Über uns';
+  if (aboutTitleEl) aboutTitleEl.innerHTML = a.innerHTML || 'About us';
   if (descEl) descEl.innerHTML = d.innerHTML || '';
 
   // ✅ In conf speichern (Titel + Text)
-  conf.aboutTitle = (aboutTitleEl?.textContent || conf.aboutTitle || 'Über uns').slice(0,100);
+  conf.aboutTitle = (aboutTitleEl?.textContent || 'About us').slice(0,100);
   conf.desc       = (descEl?.textContent || '').slice(0,500);
 
   saveConf();
@@ -1354,7 +1307,6 @@ renderGrid();
 applyMods();
 applyConf();
 applyReviewsUI();
-try { document.documentElement.style.visibility = 'visible'; } catch {}
 
 if (EDIT_MODE) {
   const t  = document.getElementById('edTitle');
@@ -1376,7 +1328,8 @@ pickBtn?.addEventListener('click', () => fileIn?.click());
 fileIn?.addEventListener('change', () => {
   const f = fileIn.files?.[0];
   if (!f) return;
-  readFileAsDataURL(f).then(setLogo).catch(()=>alert('Bild konnte nicht gelesen werden.'));
+  const blobUrl = URL.createObjectURL(f);
+  setLogo(blobUrl);
 });
 
 ['dragenter','dragover'].forEach(ev =>
@@ -1388,7 +1341,8 @@ dropRow?.addEventListener(ev, e => { e.preventDefault(); dropRow.classList.remov
 dropRow?.addEventListener('drop', (e) => {
   const f = e.dataTransfer?.files?.[0];
   if (!f) return;
-  readFileAsDataURL(f).then(setLogo).catch(()=>alert('Bild konnte nicht gelesen werden.'));
+  const blobUrl = URL.createObjectURL(f);
+  setLogo(blobUrl);
 });
 
 // Utils: Panel-Inject für reine Shop-Seite
