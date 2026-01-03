@@ -1,4 +1,5 @@
-(async function(){
+(async () => {
+  try { document.documentElement.style.visibility = 'hidden'; } catch {}
 // GLOBAL geteilter BroadcastChannel (für alle IIFEs)
 window.bc = window.bc || (('BroadcastChannel' in window) ? new BroadcastChannel('od_sync') : null);
 
@@ -25,17 +26,11 @@ if (EDIT_MODE) {
     document.getElementById('quickFab')?.removeAttribute('hidden');
     // quickPanel bleibt hidden bis du auf den FAB klickst (so wie jetzt)
   });
-
-
-  const aT = document.getElementById('edAboutTitle');
-  const aD = document.getElementById('edAboutDesc');
-  if (aT) aT.textContent = (conf.aboutTitle || 'About us').slice(0, 100);
-  if (aD) aD.textContent = (conf.desc || '').slice(0, 500);
 }
 
 /* ========== GLOBALER HOVER-FREEZE ========== */
 window.__hoverFreeze = false;
-;(() => {
+;(async () => {
   /* ============ Mini-Helpers ============ */
   const $  = (s, r=document) => r.querySelector(s);
   const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
@@ -118,13 +113,13 @@ function serverSaveState(partial){
 }
 
 // Wichtig: Server-Zustand zuerst in localStorage laden (damit Mobile/andere PCs den gleichen Stand sehen)
-(async () => {
+  // Wichtig: Server-Zustand zuerst in localStorage laden (damit Mobile/andere PCs den gleichen Stand sehen)
   try {
     await serverHydrateLocalStorage();
   } catch (e) {
-    // optional: console.warn("hydrate failed", e);
+    // optional: console.warn('hydrate failed', e);
   }
-})();
+
 
 
   // Live-Sync
@@ -159,7 +154,7 @@ function serverSaveState(partial){
   desc: 'HIER DEIN DEFAULT ABOUT TEXT ...',
 
   // About-Überschrift
-  aboutTitle: 'About us',
+  aboutTitle: 'Über uns',
 
   // ✅ NEU: Profil/Branding
   company: 'Dotagora',
@@ -267,6 +262,11 @@ if (fab) {
 
   const desc = $('#bizDesc');
   if(desc){ desc.textContent = (conf.desc || '').slice(0,500); }
+
+  // About-Überschrift anwenden (kein 'About us'-Flash mehr)
+  const aboutTitleEl = document.querySelector('#about .section-title');
+  if (aboutTitleEl) aboutTitleEl.textContent = (conf.aboutTitle || 'Über uns').slice(0, 100);
+
 
   // Kontakt-Symbole anwenden
   applySocialVisibility();
@@ -1319,6 +1319,7 @@ renderGrid();
 applyMods();
 applyConf();
 applyReviewsUI();
+try { document.documentElement.style.visibility = 'visible'; } catch {}
 
 if (EDIT_MODE) {
   const t  = document.getElementById('edTitle');
